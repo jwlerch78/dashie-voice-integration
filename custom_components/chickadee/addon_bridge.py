@@ -46,21 +46,27 @@ _secret_cache: str | None = None
 def _read_bridge_secret_sync(hass: HomeAssistant) -> str | None:
     """Read the shared secret the add-on drops in its addon_config folder.
 
-    The addon_config folder is named after the INSTALLED slug, which carries a
-    prefix depending on how the add-on was installed (`local_chickadee` from
-    /addons, `<repo-hash>_chickadee` from a repo channel, bare `chickadee` if HA
-    ever uses the raw slug) — so glob for *chickadee rather than a fixed path.
-    HA Core sees addon_configs under its config dir or a root mount; try both.
+    Primary (works on HAOS, verified 2026-07-25): `.chickadee/bridge_secret`
+    inside the HA config dir — the add-on writes it via its homeassistant_config
+    mount, because HA Core does NOT see /addon_configs on HAOS. INTERIM channel
+    (other add-ons with a config mount can read it); replace with Supervisor
+    discovery (CONTRACTS.md).
+
+    Fallbacks: the addon_config folder, named after the INSTALLED slug, which
+    carries an install-dependent prefix (`local_chickadee` from /addons,
+    `<repo-hash>_chickadee` from a repo channel) — so glob for *chickadee.
     """
+    candidates: list[str] = [hass.config.path(".chickadee/bridge_secret")]
     for root in (hass.config.path("addon_configs"), "/addon_configs"):
-        for path in sorted(glob.glob(os.path.join(root, "*chickadee", "bridge_secret"))):
-            try:
-                with open(path, encoding="utf-8") as fh:
-                    secret = fh.read().strip()
-                if secret:
-                    return secret
-            except OSError:
-                continue
+        candidates.extend(sorted(glob.glob(os.path.join(root, "*chickadee", "bridge_secret"))))
+    for path in candidates:
+        try:
+            with open(path, encoding="utf-8") as fh:
+                secret = fh.read().strip()
+            if secret:
+                return secret
+        except OSError:
+            continue
     return None
 
 
