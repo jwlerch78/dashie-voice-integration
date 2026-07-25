@@ -1,0 +1,22 @@
+name: Feature request
+description: Suggest an improvement to the Chickadee integration
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The use case, not just the feature — it helps us find the right shape.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: input
+    id: satellite
+    attributes:
+      label: Satellite(s) involved
+      placeholder: e.g. Voice PE, Fully Kiosk + Voice Satellite card, browser

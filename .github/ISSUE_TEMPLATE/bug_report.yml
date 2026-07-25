@@ -1,0 +1,59 @@
+name: Bug report
+description: Something in the Chickadee integration isn't working
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! If the problem is in the **add-on** (engine routing,
+        model errors, add-on won't start), please file it at
+        [chickadee-addons](https://github.com/jwlerch78/chickadee-addons/issues) instead.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you say/do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: input
+    id: ha-version
+    attributes:
+      label: Home Assistant version
+      placeholder: e.g. 2026.7.1
+    validations:
+      required: true
+  - type: input
+    id: chickadee-version
+    attributes:
+      label: Chickadee integration version
+      placeholder: e.g. 0.1.0
+    validations:
+      required: true
+  - type: input
+    id: addon-version
+    attributes:
+      label: Chickadee add-on version
+      placeholder: e.g. 0.2.0 (Settings → Add-ons → Chickadee)
+  - type: input
+    id: satellite
+    attributes:
+      label: Satellite / how you talk to it
+      placeholder: e.g. Voice PE, ESPHome satellite, browser Assist dialog, tablet
+  - type: textarea
+    id: pipeline
+    attributes:
+      label: Pipeline setup
+      description: Which stages use Chickadee (conversation / STT / TTS) and what engines the add-on is pointed at (no keys!).
+      placeholder: |
+        conversation: Chickadee → Ollama qwen2.5:7b on LAN box
+        stt: Chickadee → faster-whisper on LAN box
+        tts: Piper (HA add-on)
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        Relevant lines from Settings → System → Logs (filter "chickadee") and the
+        add-on log (look for CHICKADEE-TURN / CHICKADEE-STT / CHICKADEE-TTS / DROP markers).
+        Redact anything sensitive.
+      render: text

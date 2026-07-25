@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Chickadee add-on issues (engines, brain runtime, add-on won't start)
+    url: https://github.com/jwlerch78/chickadee-addons/issues
+    about: The add-on has its own tracker — engine routing and runtime problems go there.

@@ -1,0 +1,38 @@
+name: Satellite compatibility report
+description: Tell us how Chickadee runs on your satellite hardware (works great counts too!)
+labels: ["compat-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These reports directly feed the README compatibility matrix. Working setups
+        are as valuable as broken ones.
+  - type: input
+    id: satellite
+    attributes:
+      label: Satellite hardware/software
+      placeholder: e.g. HA Voice PE, M5Stack Atom Echo (ESPHome), Fully Kiosk on Lenovo tab
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Overall result
+      options:
+        - Works well
+        - Works with issues
+        - Doesn't work
+    validations:
+      required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Pipeline + engines
+      description: Which stages use Chickadee and what engines/models the add-on points at (no keys).
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Latency you see, wake behavior, anything odd, log snippets.
