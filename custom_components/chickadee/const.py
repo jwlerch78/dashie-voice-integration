@@ -32,6 +32,7 @@ ADDON_CONVERSE_PATH = "/api/voice/converse"
 ADDON_PING_PATH = "/api/ping"
 ADDON_STT_PATH = "/api/voice/stt"
 ADDON_TTS_PATH = "/api/voice/tts"
+ADDON_TTS_VOICES_PATH = "/api/voice/voices"
 
 # ── Config entry ───────────────────────────────────────────────────────────────
 CONF_ASSISTANT_NAME = "assistant_name"
