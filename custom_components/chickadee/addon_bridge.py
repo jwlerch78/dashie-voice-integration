@@ -26,7 +26,10 @@ _LOGGER = logging.getLogger(__name__)
 
 SUPERVISOR_URL = "http://supervisor"
 
-_TIMEOUT = ClientTimeout(total=30)
+# Generous turn budget: a local model on modest hardware (the open build's common
+# case) can take a minute-plus on the brain's long prompts; HA's conversation
+# service has no hard per-turn ceiling, so the bridge sets the practical one.
+_TIMEOUT = ClientTimeout(total=120)
 _PING_TIMEOUT = ClientTimeout(total=5)
 
 # Resolved add-on base is cached: rediscovery on every turn would add a Supervisor
