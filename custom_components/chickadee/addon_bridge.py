@@ -26,10 +26,12 @@ _LOGGER = logging.getLogger(__name__)
 
 SUPERVISOR_URL = "http://supervisor"
 
-# Generous turn budget: a local model on modest hardware (the open build's common
-# case) can take a minute-plus on the brain's long prompts; HA's conversation
-# service has no hard per-turn ceiling, so the bridge sets the practical one.
-_TIMEOUT = ClientTimeout(total=120)
+# Turn budget: a BACKSTOP against a hung add-on, not the UX budget — satellites
+# impose their own pipeline timeouts. A local model on modest CPU hardware (the
+# open build's common case) can legitimately take minutes on the brain's long
+# prompts (measured: ~4.5 min for a 49-entity turn on a 4-core HAOS box);
+# dropping a turn the model finishes later is strictly worse than waiting.
+_TIMEOUT = ClientTimeout(total=300)
 _PING_TIMEOUT = ClientTimeout(total=5)
 
 # Resolved add-on base is cached: rediscovery on every turn would add a Supervisor
