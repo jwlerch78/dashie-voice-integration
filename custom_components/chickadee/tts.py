@@ -17,7 +17,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .addon_bridge import AddonUnavailable, call_addon_raw
-from .const import ADDON_TTS_PATH, DOMAIN
+from .const import ADDON_TTS_PATH, SUPPORTED_LANGUAGES, UNIQUE_ID_TTS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,9 +34,9 @@ class ChickadeeTtsEntity(tts.TextToSpeechEntity):
     """One TTS entity per install; the add-on routes to the configured engine."""
 
     _attr_name = "Chickadee TTS"
-    _attr_unique_id = f"{DOMAIN}_tts"
+    _attr_unique_id = UNIQUE_ID_TTS
     _attr_default_language = "en-US"
-    _attr_supported_languages = ["en", "en-US", "en-GB"]
+    _attr_supported_languages = SUPPORTED_LANGUAGES
     _attr_supported_options = [tts.ATTR_VOICE]
 
     async def async_get_tts_audio(

@@ -36,3 +36,15 @@ ADDON_TTS_PATH = "/api/voice/tts"
 # ── Config entry ───────────────────────────────────────────────────────────────
 CONF_ASSISTANT_NAME = "assistant_name"
 DEFAULT_ASSISTANT_NAME = "Chickadee"
+
+# ── Entities / pipeline ────────────────────────────────────────────────────────
+# One copy each (seam rule): the entity platforms declare these, and the
+# auto-created Assist pipeline resolves entity_ids from the registry by them.
+UNIQUE_ID_CONVERSATION = f"{DOMAIN}_conversation"
+UNIQUE_ID_STT = f"{DOMAIN}_stt"
+UNIQUE_ID_TTS = f"{DOMAIN}_tts"
+
+# Whisper-family engines are multilingual; start with the common English tags
+# (Assist matches pipelines by language tag) and widen with real demand. Shared
+# by the STT + TTS entities and the auto-created pipeline's language fields.
+SUPPORTED_LANGUAGES = ["en", "en-US", "en-GB"]

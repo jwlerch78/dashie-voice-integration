@@ -19,7 +19,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .addon_bridge import AddonUnavailable, call_addon_raw
-from .const import ADDON_STT_PATH, DOMAIN
+from .const import ADDON_STT_PATH, SUPPORTED_LANGUAGES, UNIQUE_ID_STT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,13 +49,11 @@ class ChickadeeSttEntity(stt.SpeechToTextEntity):
     """One STT entity per install; the add-on routes to the configured engine."""
 
     _attr_name = "Chickadee STT"
-    _attr_unique_id = f"{DOMAIN}_stt"
+    _attr_unique_id = UNIQUE_ID_STT
 
     @property
     def supported_languages(self) -> list[str]:
-        # Whisper-family engines are multilingual; start with the common English
-        # tags (pipeline matching is by language tag) and widen with real demand.
-        return ["en", "en-US", "en-GB"]
+        return SUPPORTED_LANGUAGES
 
     @property
     def supported_formats(self) -> list[stt.AudioFormats]:

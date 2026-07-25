@@ -19,7 +19,7 @@ from homeassistant.helpers import intent
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .addon_bridge import AddonUnavailable, call_addon_brain
-from .const import CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME, DOMAIN
+from .const import CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME, UNIQUE_ID_CONVERSATION
 from .entity_context import device_area_name, gather_exposed_entities
 
 _LOGGER = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ class ChickadeeConversationEntity(conversation.ConversationEntity):
     """One conversation agent per install; the display name is the user's persona name."""
 
     _attr_has_entity_name = False
-    _attr_unique_id = f"{DOMAIN}_conversation"
+    _attr_unique_id = UNIQUE_ID_CONVERSATION
     _attr_supported_features = _CONTROL_FEATURE
 
     def __init__(self, config_entry: ConfigEntry) -> None:
