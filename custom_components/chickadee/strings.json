@@ -1,0 +1,20 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Chickadee",
+        "description": "Chickadee routes your Assist pipeline to a pluggable brain — your own API keys, a local model, or Chickadee Cloud — configured in the Chickadee add-on.",
+        "data": {
+          "assistant_name": "Assistant name",
+          "ignore_addon": "Set up anyway (I'll install the add-on later)"
+        }
+      }
+    },
+    "error": {
+      "addon_unreachable": "The Chickadee add-on isn't reachable. Install and start it, or choose 'Set up anyway'."
+    },
+    "abort": {
+      "already_configured": "Chickadee is already configured."
+    }
+  }
+}

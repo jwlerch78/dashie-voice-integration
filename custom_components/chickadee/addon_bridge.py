@@ -1,0 +1,133 @@
+"""Bridge to the Chickadee add-on — discovery, auth, and the single brain POST site.
+
+Ported from the Dashie integration's addon_bridge (subset). The add-on owns engine
+routing and key custody; this module is the only place the integration reaches it.
+"""
+
+from __future__ import annotations
+
+import logging
+import os
+import time
+
+from aiohttp import ClientTimeout
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+
+from .const import (
+    ADDON_CANDIDATES,
+    ADDON_CONVERSE_PATH,
+    ADDON_PING_PATH,
+    BRIDGE_HEADER,
+    BRIDGE_SECRET_REL,
+)
+
+_LOGGER = logging.getLogger(__name__)
+
+SUPERVISOR_URL = "http://supervisor"
+
+_TIMEOUT = ClientTimeout(total=30)
+_PING_TIMEOUT = ClientTimeout(total=5)
+
+# Resolved add-on base is cached: rediscovery on every turn would add a Supervisor
+# round-trip to voice latency. A failed call clears the cache so the next turn
+# rediscovers (add-on restarted, container renamed, …).
+_CACHE_TTL_S = 300
+_base_cache: tuple[str, float] | None = None
+
+
+class AddonUnavailable(Exception):
+    """The Chickadee add-on can't be reached (not installed, stopped, or no bridge secret)."""
+
+
+def _read_bridge_secret(hass: HomeAssistant) -> str | None:
+    """Read the shared secret the add-on drops in its addon_config folder."""
+    path = hass.config.path(BRIDGE_SECRET_REL)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            secret = fh.read().strip()
+        return secret or None
+    except OSError:
+        return None
+
+
+async def _discover_via_supervisor(session) -> list[str]:
+    """Ask the Supervisor for the chickadee add-on's hostname (supervised installs only)."""
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    if not token:
+        return []
+    try:
+        async with session.get(
+            f"{SUPERVISOR_URL}/addons",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=_PING_TIMEOUT,
+        ) as resp:
+            data = await resp.json(content_type=None)
+    except Exception:  # noqa: BLE001 — discovery is best-effort; candidates cover the rest
+        return []
+    bases = []
+    for addon in (data.get("data") or {}).get("addons") or []:
+        slug = addon.get("slug") or ""
+        if slug.endswith("chickadee") and addon.get("state") == "started":
+            hostname = addon.get("hostname") or slug.replace("_", "-")
+            bases.append(f"http://{hostname}:8099")
+    return bases
+
+
+async def _resolve_base(hass: HomeAssistant) -> str:
+    """Find a reachable add-on base URL, preferring the cached one."""
+    global _base_cache  # noqa: PLW0603
+    if _base_cache and (time.monotonic() - _base_cache[1]) < _CACHE_TTL_S:
+        return _base_cache[0]
+
+    session = async_get_clientsession(hass)
+    candidates = await _discover_via_supervisor(session)
+    candidates.extend(b for b in ADDON_CANDIDATES if b not in candidates)
+
+    for base in candidates:
+        try:
+            async with session.get(f"{base}{ADDON_PING_PATH}", timeout=_PING_TIMEOUT) as resp:
+                if resp.status < 500:
+                    _base_cache = (base, time.monotonic())
+                    return base
+        except Exception:  # noqa: BLE001 — unreachable candidate, try the next
+            continue
+    raise AddonUnavailable(f"no reachable Chickadee add-on (tried {len(candidates)} bases)")
+
+
+async def call_addon_brain(hass: HomeAssistant, payload: dict) -> tuple[dict, int]:
+    """POST a VoiceRequest to the add-on brain. THE one brain POST site (seam rule).
+
+    Returns (turn, status) with status normalized to 200 on any <400 response.
+    Raises AddonUnavailable when the add-on or its bridge secret is missing.
+    """
+    global _base_cache  # noqa: PLW0603
+    secret = _read_bridge_secret(hass)
+    if not secret:
+        raise AddonUnavailable("bridge secret not found — is the Chickadee add-on installed?")
+
+    base = await _resolve_base(hass)
+    session = async_get_clientsession(hass)
+    try:
+        async with session.post(
+            f"{base}{ADDON_CONVERSE_PATH}",
+            json=payload,
+            headers={"Content-Type": "application/json", BRIDGE_HEADER: secret},
+            timeout=_TIMEOUT,
+        ) as resp:
+            turn = await resp.json(content_type=None)
+            return turn, (200 if resp.status < 400 else resp.status)
+    except AddonUnavailable:
+        raise
+    except Exception as err:  # noqa: BLE001
+        _base_cache = None  # force rediscovery next turn
+        raise AddonUnavailable(f"brain call failed: {err}") from err
+
+
+async def ping_addon(hass: HomeAssistant) -> bool:
+    """Reachability probe for the config flow. Never raises."""
+    try:
+        await _resolve_base(hass)
+        return True
+    except AddonUnavailable:
+        return False
