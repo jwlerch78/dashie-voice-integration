@@ -79,6 +79,9 @@ class ChickadeeConversationEntity(conversation.ConversationEntity):
             "client_fulfilled_tools": [],
             "provided_context": provided_context,
             "timezone": str(hass.config.time_zone or "UTC"),
+            # Persona: the configured assistant name renders as {{ASSISTANT_NAME}}
+            # in the brain's base prompt (absent → brain defaults to its own).
+            "assistant_name": self._attr_name,
         }
 
         try:
