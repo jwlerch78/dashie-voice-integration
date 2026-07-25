@@ -21,7 +21,9 @@ ADDON_CANDIDATES = (
 # integration, NOT by other add-ons. (Pattern inherited from the Dashie bridge
 # auth hardening; see that repo's 20260702_BRIDGE_AUTH_HARDENING.md.)
 BRIDGE_HEADER = "X-Chickadee-Bridge-Secret"
-BRIDGE_SECRET_REL = "addon_configs/chickadee/bridge_secret"
+# Secret location: addon_configs/<installed-slug>/bridge_secret, where the installed
+# slug carries an install-dependent prefix (local_chickadee from /addons,
+# <repo-hash>_chickadee from a repo channel). addon_bridge globs for *chickadee.
 
 # Add-on HTTP contract (v1). The add-on serves these on its LAN port, authed by
 # the bridge secret header. Documented in CONTRACTS.md at repo root — change them

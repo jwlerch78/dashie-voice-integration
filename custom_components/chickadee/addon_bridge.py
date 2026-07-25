@@ -6,6 +6,7 @@ routing and key custody; this module is the only place the integration reaches i
 
 from __future__ import annotations
 
+import glob
 import logging
 import os
 import time
@@ -19,7 +20,6 @@ from .const import (
     ADDON_CONVERSE_PATH,
     ADDON_PING_PATH,
     BRIDGE_HEADER,
-    BRIDGE_SECRET_REL,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,15 +40,39 @@ class AddonUnavailable(Exception):
     """The Chickadee add-on can't be reached (not installed, stopped, or no bridge secret)."""
 
 
-def _read_bridge_secret(hass: HomeAssistant) -> str | None:
-    """Read the shared secret the add-on drops in its addon_config folder."""
-    path = hass.config.path(BRIDGE_SECRET_REL)
-    try:
-        with open(path, encoding="utf-8") as fh:
-            secret = fh.read().strip()
-        return secret or None
-    except OSError:
-        return None
+_secret_cache: str | None = None
+
+
+def _read_bridge_secret_sync(hass: HomeAssistant) -> str | None:
+    """Read the shared secret the add-on drops in its addon_config folder.
+
+    The addon_config folder is named after the INSTALLED slug, which carries a
+    prefix depending on how the add-on was installed (`local_chickadee` from
+    /addons, `<repo-hash>_chickadee` from a repo channel, bare `chickadee` if HA
+    ever uses the raw slug) — so glob for *chickadee rather than a fixed path.
+    HA Core sees addon_configs under its config dir or a root mount; try both.
+    """
+    for root in (hass.config.path("addon_configs"), "/addon_configs"):
+        for path in sorted(glob.glob(os.path.join(root, "*chickadee", "bridge_secret"))):
+            try:
+                with open(path, encoding="utf-8") as fh:
+                    secret = fh.read().strip()
+                if secret:
+                    return secret
+            except OSError:
+                continue
+    return None
+
+
+async def _read_bridge_secret(hass: HomeAssistant) -> str | None:
+    """Cached, executor-wrapped secret read (file I/O off the event loop)."""
+    global _secret_cache  # noqa: PLW0603
+    if _secret_cache:
+        return _secret_cache
+    _secret_cache = await hass.async_add_executor_job(_read_bridge_secret_sync, hass)
+    if _secret_cache:
+        _LOGGER.info("Chickadee bridge secret loaded from addon_config")
+    return _secret_cache
 
 
 async def _discover_via_supervisor(session) -> list[str]:
@@ -102,7 +126,7 @@ async def call_addon_brain(hass: HomeAssistant, payload: dict) -> tuple[dict, in
     Raises AddonUnavailable when the add-on or its bridge secret is missing.
     """
     global _base_cache  # noqa: PLW0603
-    secret = _read_bridge_secret(hass)
+    secret = await _read_bridge_secret(hass)
     if not secret:
         raise AddonUnavailable("bridge secret not found — is the Chickadee add-on installed?")
 
