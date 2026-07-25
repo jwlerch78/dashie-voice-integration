@@ -30,6 +30,8 @@ BRIDGE_HEADER = "X-Chickadee-Bridge-Secret"
 # there and here together, never in one place only.
 ADDON_CONVERSE_PATH = "/api/voice/converse"
 ADDON_PING_PATH = "/api/ping"
+ADDON_STT_PATH = "/api/voice/stt"
+ADDON_TTS_PATH = "/api/voice/tts"
 
 # ── Config entry ───────────────────────────────────────────────────────────────
 CONF_ASSISTANT_NAME = "assistant_name"
