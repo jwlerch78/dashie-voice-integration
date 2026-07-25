@@ -56,11 +56,9 @@ This is a young project. Here's the honest line between shipped and planned:
 
 **Planned / in progress (not promised dates):**
 
-- Auto-created Assist pipeline from the config flow (today you assemble the
-  pipeline yourself in Settings → Voice assistants — two minutes, steps below).
 - A hosted engine option for people who don't want to run or key their own models.
-- Assistant personality, memory, and extra tools (the brain core supports them;
-  the open runtime doesn't expose them yet).
+- Assistant personality (beyond the assistant's name), memory, and extra tools
+  (the brain core supports them; the open runtime doesn't expose them yet).
 - Streaming responses; better answers to open questions ("which lights are on?")
   on audio-only satellites.
 
@@ -108,17 +106,21 @@ Settings → Devices & Services → **Add integration → Chickadee**. The flow 
 the add-on is reachable and asks what to call your assistant. If you installed the
 integration first, choose "Set up anyway" and it will find the add-on when it's up.
 
-### 4. Assemble the pipeline
+Setup creates a ready-to-use Assist pipeline wired to the Chickadee
+conversation/STT/TTS entities — point your satellites at it and talk. It's never
+marked as your preferred pipeline, and an existing Chickadee pipeline is left
+untouched.
 
-Settings → Voice assistants → **Add assistant**:
+### 4. Or assemble the pipeline yourself
+
+Prefer to mix stages? Settings → Voice assistants → **Add assistant**:
 
 - **Conversation agent:** Chickadee
 - **Speech-to-text:** Chickadee (or keep Whisper/HA Cloud if you prefer)
 - **Text-to-speech:** Chickadee (or keep Piper/HA Cloud)
 
-Mix freely — each stage is independent. Point your satellites at the new pipeline
-and talk to it. (Auto-creating this pipeline from the config flow is on the
-roadmap.)
+Each stage is independent — local Whisper with a Chickadee brain is a fine
+pipeline.
 
 ## Configuring engines
 

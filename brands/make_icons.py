@@ -1,8 +1,10 @@
-"""Generate the Chickadee mark: flat geometric black-capped chickadee roundel.
+"""Generate the Chickadee mark — "Tech Accent" style (John's pick, 2026-07-25):
+white bird head + black cap + blue wing accent on a dark round badge, with a
+rounded lowercase wordmark and the blue tagline "voice & ai, plug and play".
 
 Outputs:
   chickadee-addons/chickadee/icon.png        (256x256, badge)
-  chickadee-addons/chickadee/logo.png        (500x200, mark + wordmark, transparent)
+  chickadee-addons/chickadee/logo.png        (500 wide, mark + wordmark + tagline)
   chickadee/brands/custom_integrations/chickadee/icon.png     (256x256)
   chickadee/brands/custom_integrations/chickadee/icon@2x.png  (512x512)
   chickadee/brands/custom_integrations/chickadee/logo.png     (512 wide)
@@ -13,85 +15,77 @@ import math, os
 
 S = 1024  # master canvas
 
-TEAL = (47, 107, 94, 255)       # badge
-INK = (34, 34, 38, 255)         # cap/bib/beak near-black
-CREAM = (250, 247, 240, 255)    # cheeks
-BUFF = (232, 195, 158, 255)     # flank accent
+DARK = (22, 24, 29, 255)       # badge background
+CAP = (14, 15, 18, 255)        # cap/beak black
+WHITE = (255, 255, 255, 255)   # face
+BLUE = (61, 125, 219, 255)     # wing accent + tagline
+INKTEXT = (26, 28, 34, 255)    # wordmark
 
-def draw_bird(d, cx, cy, r, with_buff=True):
-    """Chickadee head roundel: cream head, black cap (chord), small bib, beak."""
+def draw_bird_e(d, cx, cy, r):
+    """Column-E bird: white-outlined head, black cap chord, blue wing, bold beak."""
+    # white outline ring so the cap reads against a dark badge
+    o = r * 0.09
+    d.ellipse((cx - r - o, cy - r - o, cx + r + o, cy + r + o), fill=WHITE)
     bbox = (cx - r, cy - r, cx + r, cy + r)
-    # head
-    d.ellipse(bbox, fill=CREAM)
-    # black cap: chord across the upper ~40% of the head, tilted down toward the beak
-    d.chord(bbox, 197, 343, fill=INK)
-    # bib: narrow wedge at bottom center
-    d.pieslice(bbox, 68, 92, fill=INK)
-    # beak: small triangle on the right at the cap/cheek boundary
-    ang = math.radians(-14)
-    bx = cx + r * math.cos(ang)
-    by = cy + r * math.sin(ang)
-    blen = r * 0.36
+    # white head
+    d.ellipse(bbox, fill=WHITE)
+    # blue wing accent: curved crescent hugging the lower-left edge —
+    # a chord lens cut by an offset white circle
+    ib = (cx - r * 0.99, cy - r * 0.99, cx + r * 0.99, cy + r * 0.99)
+    d.chord(ib, 88, 192, fill=BLUE)
+    ccx, ccy, cr = cx + r * 0.22, cy - r * 0.16, r * 0.96
+    d.ellipse((ccx - cr, ccy - cr, ccx + cr, ccy + cr), fill=WHITE)
+    # black cap: chord across the top ~40%
+    d.chord(bbox, 192, 348, fill=CAP)
+    # eye: black dot on the white, tucked under the cap on the beak side
+    ex, ey = cx + r * 0.33, cy - r * 0.02
+    er = r * 0.105
+    d.ellipse((ex - er, ey - er, ex + er, ey + er), fill=CAP)
+    # beak: bold triangle at the right edge, at the cap junction
     d.polygon([
-        (bx - r * 0.20, by - r * 0.14),
-        (bx + blen, by + r * 0.05),
-        (bx - r * 0.12, by + r * 0.18),
-    ], fill=INK)
-    # eye glint inside the cap
-    ex, ey = cx + r * 0.36, cy - r * 0.40
-    er = r * 0.075
-    d.ellipse((ex - er, ey - er, ex + er, ey + er), fill=CREAM)
+        (cx + r * 0.72, cy - r * 0.30),
+        (cx + r * 1.34, cy - r * 0.02),
+        (cx + r * 0.70, cy + r * 0.22),
+    ], fill=CAP)
 
 def make_badge():
     img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    m = 40
-    d.ellipse((m, m, S - m, S - m), fill=TEAL)
-    draw_bird(d, S // 2 - 30, S // 2 + 20, 330)
-    return img
-
-def make_mark_transparent():
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    draw_bird(d, S // 2 - 20, S // 2, 430)
+    m = 24
+    # thin white rim, then dark badge
+    d.ellipse((m, m, S - m, S - m), fill=WHITE)
+    rim = 14
+    d.ellipse((m + rim, m + rim, S - m - rim, S - m - rim), fill=DARK)
+    draw_bird_e(d, S // 2 - 45, S // 2 + 15, 320)
     return img
 
 def load_font(size):
-    for p in (
-        "/System/Library/Fonts/Supplemental/Avenir Next.ttc",
-        "/System/Library/Fonts/Supplemental/Futura.ttc",
-        "/System/Library/Fonts/HelveticaNeue.ttc",
-    ):
-        if os.path.exists(p):
-            try:
-                # index 0 may be Regular; try to find a demi/medium face
-                for idx in range(12):
-                    try:
-                        f = ImageFont.truetype(p, size, index=idx)
-                        name = " ".join(f.getname())
-                        if any(w in name for w in ("Demi", "Medium", "Bold")):
-                            return f
-                    except OSError:
-                        break
-                return ImageFont.truetype(p, size)
-            except OSError:
-                continue
-    return ImageFont.load_default()
+    return ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf", size)
 
 def make_logo():
-    W, H = 3400, 640
+    W, H = 3600, 800
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    r = 250
-    cx, cy = 300, H // 2
-    d.ellipse((cx - r - 26, cy - r - 26, cx + r + 26, cy + r + 26), fill=TEAL)
-    draw_bird(d, cx - 8, cy + 6, r * 0.78)
-    font = load_font(340)
+    # mark
+    r = 300
+    cx, cy = 340, H // 2
+    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=WHITE)
+    rim = 10
+    d.ellipse((cx - r + rim, cy - r + rim, cx + r - rim, cy + r - rim), fill=DARK)
+    draw_bird_e(d, cx - 24, cy + 4, r * 0.62)
+    # wordmark
+    f_word = load_font(360)
+    f_tag = load_font(108)
     text = "chickadee"
-    tx = cx + r + 110
-    bb = d.textbbox((0, 0), text, font=font)
-    ty = cy - (bb[3] - bb[1]) / 2 - bb[1]
-    d.text((tx, ty), text, font=font, fill=INK)
+    tag = "voice & ai, plug and play"
+    tx = cx + r + 120
+    wb = d.textbbox((0, 0), text, font=f_word)
+    tb = d.textbbox((0, 0), tag, font=f_tag)
+    gap = 40
+    total_h = (wb[3] - wb[1]) + gap + (tb[3] - tb[1])
+    top = cy - total_h / 2
+    d.text((tx, top - wb[1]), text, font=f_word, fill=INKTEXT)
+    d.text((tx + 14, top + (wb[3] - wb[1]) + gap - tb[1]), tag, font=f_tag, fill=BLUE)
     # crop to content + padding
     bbox = img.getbbox()
     pad = 30
@@ -115,8 +109,7 @@ badge.resize((512, 512), Image.LANCZOS).save(f"{BRANDS}/icon@2x.png")
 logo.resize((512, int(lh * 512 / lw)), Image.LANCZOS).save(f"{BRANDS}/logo.png")
 logo.resize((1024, int(lh * 1024 / lw)), Image.LANCZOS).save(f"{BRANDS}/logo@2x.png")
 
-# preview copies for the user
 SCRATCH = os.path.dirname(os.path.abspath(__file__))
 badge.resize((256, 256), Image.LANCZOS).save(f"{SCRATCH}/preview_icon.png")
-logo.resize((800, int(lh * 800 / lw)), Image.LANCZOS).save(f"{SCRATCH}/preview_logo.png")
+logo.resize((900, int(lh * 900 / lw)), Image.LANCZOS).save(f"{SCRATCH}/preview_logo.png")
 print("done", logo.size)
