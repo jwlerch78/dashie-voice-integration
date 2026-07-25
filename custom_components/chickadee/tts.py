@@ -87,4 +87,7 @@ class ChickadeeTtsEntity(tts.TextToSpeechEntity):
         if status >= 400 or not body or "audio" not in (ctype or ""):
             _LOGGER.warning("DROP: Chickadee TTS — add-on HTTP %s (%s): %s", status, ctype, body[:200])
             return None, None
-        return "wav", body
+        # Extension follows the engine: BYO servers return WAV, the hosted
+        # (Chickadee Cloud) voice returns MP3 (audio/mpeg).
+        ext = "mp3" if "mpeg" in ctype or "mp3" in ctype else "wav"
+        return ext, body
