@@ -36,6 +36,12 @@ ADDON_TTS_PATH = "/api/voice/tts"
 # ── Config entry ───────────────────────────────────────────────────────────────
 CONF_ASSISTANT_NAME = "assistant_name"
 DEFAULT_ASSISTANT_NAME = "Chickadee"
+# Bridge credentials delivered by Supervisor discovery (config_flow
+# async_step_hassio; the add-on re-publishes on every start). Primary channel;
+# the file copies under the HA config dir are the legacy fallback.
+CONF_BRIDGE_SECRET = "bridge_secret"
+CONF_BRIDGE_HOST = "bridge_host"
+CONF_BRIDGE_PORT = "bridge_port"
 
 # ── Entities / pipeline ────────────────────────────────────────────────────────
 # One copy each (seam rule): the entity platforms declare these, and the

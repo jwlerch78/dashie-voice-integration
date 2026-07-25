@@ -19,6 +19,7 @@ from .const import (
     ADDON_CANDIDATES,
     ADDON_CONVERSE_PATH,
     ADDON_PING_PATH,
+    ADDON_PORT,
     BRIDGE_HEADER,
 )
 
@@ -46,6 +47,18 @@ class AddonUnavailable(Exception):
 
 
 _secret_cache: str | None = None
+
+
+def set_bridge_config(secret: str | None, host: str | None, port: int | None) -> None:
+    """Prime the bridge with Supervisor-discovery credentials (from the config
+    entry, at setup). Discovery is the PRIMARY channel; passing an empty secret
+    leaves the legacy file-read fallback in charge. Also seeds the base cache
+    with the discovered host so the first turn skips candidate probing."""
+    global _secret_cache, _base_cache  # noqa: PLW0603
+    if secret:
+        _secret_cache = secret
+    if host:
+        _base_cache = (f"http://{host}:{port or ADDON_PORT}", time.monotonic())
 
 
 def _read_bridge_secret_sync(hass: HomeAssistant) -> str | None:

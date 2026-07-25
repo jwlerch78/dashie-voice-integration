@@ -19,9 +19,17 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.core import callback
+from homeassistant.helpers.service_info.hassio import HassioServiceInfo
 
 from .addon_bridge import ping_addon
-from .const import CONF_ASSISTANT_NAME, DEFAULT_ASSISTANT_NAME, DOMAIN
+from .const import (
+    CONF_ASSISTANT_NAME,
+    CONF_BRIDGE_HOST,
+    CONF_BRIDGE_PORT,
+    CONF_BRIDGE_SECRET,
+    DEFAULT_ASSISTANT_NAME,
+    DOMAIN,
+)
 
 _USER_SCHEMA = vol.Schema(
     {vol.Optional(CONF_ASSISTANT_NAME, default=DEFAULT_ASSISTANT_NAME): str}
@@ -32,6 +40,49 @@ class ChickadeeConfigFlow(ConfigFlow, domain=DOMAIN):
     """Single-instance flow: reachability probe + assistant name."""
 
     VERSION = 1
+    _hassio_discovery: HassioServiceInfo | None = None
+
+    async def async_step_hassio(
+        self, discovery_info: HassioServiceInfo
+    ) -> ConfigFlowResult:
+        """Supervisor discovery from the Chickadee add-on: {host, port, secret}.
+
+        The add-on re-publishes on every start, so an EXISTING entry gets its
+        bridge credentials refreshed silently here (the primary secret channel;
+        the file copies are the legacy fallback). A fresh install stashes the
+        payload and asks the user to confirm adding Chickadee.
+        """
+        bridge = {
+            CONF_BRIDGE_SECRET: str(discovery_info.config.get("secret") or ""),
+            CONF_BRIDGE_HOST: str(discovery_info.config.get("host") or ""),
+            CONF_BRIDGE_PORT: int(discovery_info.config.get("port") or 8099),
+        }
+        await self.async_set_unique_id(DOMAIN)
+        # Existing install → refresh bridge credentials in place, then abort.
+        # (reload_on_update: the update listener reloads the entry, and setup
+        # re-primes hass.data with the fresh secret.)
+        self._abort_if_unique_id_configured(updates=bridge)
+
+        self._hassio_discovery = discovery_info
+        return await self.async_step_hassio_confirm()
+
+    async def async_step_hassio_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Confirm creating the entry from add-on discovery."""
+        assert self._hassio_discovery is not None
+        if user_input is not None:
+            info = self._hassio_discovery
+            return self.async_create_entry(
+                title=DEFAULT_ASSISTANT_NAME,
+                data={
+                    CONF_ASSISTANT_NAME: DEFAULT_ASSISTANT_NAME,
+                    CONF_BRIDGE_SECRET: str(info.config.get("secret") or ""),
+                    CONF_BRIDGE_HOST: str(info.config.get("host") or ""),
+                    CONF_BRIDGE_PORT: int(info.config.get("port") or 8099),
+                },
+            )
+        return self.async_show_form(step_id="hassio_confirm")
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None

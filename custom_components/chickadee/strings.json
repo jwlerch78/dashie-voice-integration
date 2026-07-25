@@ -8,6 +8,10 @@
           "assistant_name": "Assistant name",
           "ignore_addon": "Set up anyway (I'll install the add-on later)"
         }
+      },
+      "hassio_confirm": {
+        "title": "Chickadee add-on discovered",
+        "description": "The Chickadee add-on is running on this Home Assistant. Add the Chickadee voice pipeline? A ready-to-use Assist pipeline is created for you."
       }
     },
     "error": {
