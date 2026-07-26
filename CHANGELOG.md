@@ -2,6 +2,17 @@
 
 All notable changes to the Chickadee integration.
 
+## 0.3.0 — 2026-07-25
+
+### Added
+- **Add-on auto-discovery** — the add-on announces itself (and its bridge
+  credentials) via Supervisor discovery; existing installs pick up refreshed
+  credentials silently, and fresh installs get a one-tap confirm flow.
+- **Native voice picker** — the TTS entity exposes the engine's voice catalog,
+  so pipeline voice selection is a dropdown instead of a text field.
+- TTS audio format now follows the engine (hosted Chickadee Cloud voices are
+  MP3; BYO servers stay WAV).
+
 ## 0.2.0 — 2026-07-25
 
 ### Added
