@@ -207,6 +207,44 @@ async def call_addon_raw(
         raise AddonUnavailable(f"add-on call failed: {err}") from err
 
 
+async def call_addon_json(
+    hass: HomeAssistant,
+    path: str,
+    *,
+    method: str = "get",
+    payload: dict | None = None,
+    timeout_s: int = 5,
+) -> tuple[int, dict]:
+    """Call a JSON add-on endpoint with the bridge secret. Returns (status, body).
+
+    The generic transport under account_bridge.py (the LAN-sharing lane) —
+    call_addon_brain/call_addon_raw stay the voice-turn sites. Raises
+    AddonUnavailable when the add-on or its bridge secret is missing.
+    """
+    global _base_cache  # noqa: PLW0603
+    secret = await _read_bridge_secret(hass)
+    if not secret:
+        raise AddonUnavailable("bridge secret not found — is the Chickadee add-on installed?")
+
+    base = await _resolve_base(hass)
+    session = async_get_clientsession(hass)
+    try:
+        async with session.request(
+            method.upper(),
+            f"{base}{path}",
+            json=payload,
+            headers={BRIDGE_HEADER: secret},
+            timeout=ClientTimeout(total=timeout_s),
+        ) as resp:
+            body = await resp.json(content_type=None)
+            return resp.status, (body if isinstance(body, dict) else {})
+    except AddonUnavailable:
+        raise
+    except Exception as err:  # noqa: BLE001
+        _base_cache = None  # force rediscovery next call
+        raise AddonUnavailable(f"add-on call failed: {err}") from err
+
+
 async def ping_addon(hass: HomeAssistant) -> bool:
     """Reachability probe for the config flow. Never raises."""
     try:
