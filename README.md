@@ -1,4 +1,11 @@
-# Chickadee
+# Chickadee — the integration
+
+> **Just want Chickadee?** Head to the main repo:
+> **[github.com/jwlerch78/chickadee](https://github.com/jwlerch78/chickadee)** —
+> the add-on there installs and updates this integration for you, one URL,
+> no HACS needed. This repository is the engine room: integration source,
+> architecture, and the manual/HACS install path for people who prefer to
+> manage components themselves.
 
 **Chickadee gives your Assist pipeline a real brain.** One integration provides a
 conversation agent, STT, and TTS for Home Assistant — backed by whatever you want:
@@ -84,23 +91,27 @@ Two honest notes:
 
 ## Installation
 
-### 1. Install the add-on (the brain)
+### The easy way (recommended)
 
-1. Settings → Add-ons → Add-on Store → **⋮ → Repositories**
-2. Add `https://github.com/jwlerch78/chickadee`
-3. Install **Chickadee**, configure at least `llm_url` + `llm_model`
-   (see the add-on's Documentation tab), and start it.
+Follow the [main repo](https://github.com/jwlerch78/chickadee): install the
+add-on, and it installs this integration automatically, keeps it updated with
+add-on releases, and walks you through the one restart + one click of setup.
+(The auto-installer marks its copy and will never touch a HACS or manual
+install it didn't create.)
 
-### 2. Install the integration (this repo, via HACS)
+### The manual way (HACS)
 
-1. HACS → **⋮ → Custom repositories**
-2. Repository: `https://github.com/jwlerch78/chickadee`, type **Integration**
+1. Install the [add-on](https://github.com/jwlerch78/chickadee) (the brain) and
+   set `install_integration: false` in its configuration if you want HACS to
+   own the integration.
+2. HACS → **⋮ → Custom repositories** → add
+   `https://github.com/jwlerch78/chickadee-integration`, type **Integration**
 3. Install **Chickadee**, restart Home Assistant.
 
-*(No HACS? Copy `custom_components/chickadee/` into your `config/custom_components/`
-and restart.)*
+*(No HACS? Copy `custom_components/chickadee/` into your
+`config/custom_components/` and restart.)*
 
-### 3. Add the integration
+### Add the integration
 
 Settings → Devices & Services → **Add integration → Chickadee**. The flow checks
 the add-on is reachable and asks what to call your assistant. If you installed the
