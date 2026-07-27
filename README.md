@@ -19,7 +19,7 @@ Two pieces, installed together:
 - **This integration** (`chickadee`) — the Assist-pipeline surface: a
   `conversation` entity, an `stt` entity, and a `tts` entity. Thin by design; it
   contains no engine logic.
-- **The [Chickadee add-on](https://github.com/jwlerch78/chickadee-addons)** — the
+- **The [Chickadee add-on](https://github.com/jwlerch78/chickadee)** — the
   brain runtime. It routes each stage of the pipeline to any OpenAI-compatible
   endpoint you configure: a local model server, a cloud provider with your own key,
   or a mix (local STT + cloud LLM is a great combination). The integration talks to
@@ -87,7 +87,7 @@ Two honest notes:
 ### 1. Install the add-on (the brain)
 
 1. Settings → Add-ons → Add-on Store → **⋮ → Repositories**
-2. Add `https://github.com/jwlerch78/chickadee-addons`
+2. Add `https://github.com/jwlerch78/chickadee`
 3. Install **Chickadee**, configure at least `llm_url` + `llm_model`
    (see the add-on's Documentation tab), and start it.
 
@@ -126,7 +126,7 @@ pipeline.
 
 All engine configuration lives in the **add-on** (Settings → Add-ons → Chickadee →
 Configuration) — the integration stays thin. Quick reference; full details in the
-add-on's [Documentation tab](https://github.com/jwlerch78/chickadee-addons/blob/main/chickadee/DOCS.md):
+add-on's [Documentation tab](https://github.com/jwlerch78/chickadee/blob/main/chickadee/DOCS.md):
 
 | Stage | Options | Examples |
 |---|---|---|
