@@ -2,6 +2,25 @@
 
 All notable changes to the Chickadee integration.
 
+## 0.5.0 — 2026-07-27
+
+### Added
+- **Canonical `/api/chickadee/voice/*` paths** — every gateway view now serves
+  `/api/chickadee/voice/status|converse|session|live-token` and
+  `/api/chickadee/account/authorize`; the `/api/dashie/...` paths remain as
+  legacy aliases for shipped Dashie apps (same handlers).
+- `X-Chickadee-Brain-Route` response header (canonical twin of
+  `X-Dashie-Brain-Route`, which stays for compatibility).
+- SPDX license headers on every module + LICENSE shipped inside
+  `custom_components/chickadee/` (so auto-installed copies carry it).
+
+### Changed
+- Cloud brain / STT-token URLs are no longer hardcoded to one environment:
+  the add-on reports its configured environment's base URL
+  (`cloud_url` on `/api/internal/sharing-status`, add-on ≥0.9) and the
+  gateway derives its edge-function URLs from it. Older add-ons fall back
+  to the previous behavior.
+
 ## 0.3.0 — 2026-07-25
 
 ### Added
