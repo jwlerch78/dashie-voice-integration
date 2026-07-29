@@ -61,9 +61,16 @@ This is a young project. Here's the honest line between shipped and planned:
 - Real smart-home actions against exposed entities ("turn on the dining room
   light"), including multi-step commands.
 
+- **Chickadee Cloud** — the optional hosted engine option, for people who don't
+  want to run or key their own models. Sign in from the add-on's panel and any
+  engine you leave blank runs hosted, metered against a prepaid credit balance.
+  It is opt-in and never a fallback: with no account and no engine configured,
+  the add-on refuses the turn rather than routing it anywhere. This is the
+  project's business model, and it's described in full in
+  [PRIVACY.md](PRIVACY.md) and [PROVENANCE.md](PROVENANCE.md).
+
 **Planned / in progress (not promised dates):**
 
-- A hosted engine option for people who don't want to run or key their own models.
 - Assistant personality (beyond the assistant's name), memory, and extra tools
   (the brain core supports them; the open runtime doesn't expose them yet).
 - Streaming responses; better answers to open questions ("which lights are on?")
@@ -155,11 +162,21 @@ while a 4-core CPU HA box can take minutes per turn on prompt prefill alone.
 
 ## Privacy
 
+Full statement: **[PRIVACY.md](PRIVACY.md)**. The short version:
+
 - The integration and add-on talk only over the local bridge on your box.
-- Audio and text go only to the engine endpoints **you** configure — point
-  everything at LAN servers and nothing leaves your network.
-- The brain sees only your Assist-exposed entities.
-- Conversation logging stays on-box.
+- Audio and text go only to the engine endpoints **you** configure. Point
+  everything at LAN servers and nothing leaves your network — that is a real,
+  supported mode, not a theoretical one, and it needs no account.
+- **If you sign in and leave an engine blank, that stage runs on Chickadee
+  Cloud** — so in that configuration audio or text does leave your network, to
+  us and to the provider behind that stage. That's the trade you opt into;
+  [PRIVACY.md](PRIVACY.md) says exactly what is sent, what is stored, and for
+  how long.
+- The brain sees only your Assist-exposed entities, and can only act on those
+  same entities, through an allowlist of service domains.
+- Conversation logging stays on-box. Transcripts are stored server-side only if
+  you turn transcript retention on.
 
 ## Contributing
 
