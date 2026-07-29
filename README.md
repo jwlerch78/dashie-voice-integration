@@ -184,6 +184,16 @@ Issues and PRs welcome — bug reports and satellite compatibility reports
 especially. See the [issue templates](.github/ISSUE_TEMPLATE). Cross-boundary
 changes (integration ↔ add-on) must update [CONTRACTS.md](CONTRACTS.md).
 
+## Who builds this
+
+One maintainer, **heavily AI-assisted and human-reviewed**, on top of a voice
+stack that has been running in real households since 2025 — which is why the
+public history is short and fast. Chickadee is built and operated by the makers
+of [Dashie](https://dashieapp.com), a closed-source commercial family dashboard
+for Home Assistant; [PROVENANCE.md](PROVENANCE.md) sets out that relationship
+in full, including why some identifiers still say `dashie` and how the money
+works. What leaves your box, per mode, is in [PRIVACY.md](PRIVACY.md).
+
 ## License
 
 [AGPL-3.0](LICENSE). Operated by the makers of [Dashie](https://dashieapp.com).
