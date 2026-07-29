@@ -16,6 +16,15 @@ you configured (your Ollama box, your Whisper server), the brain runs in
 the add-on, and no Chickadee service is contacted — there is no account,
 no telemetry, no version ping.
 
+One honest exception, and it isn't us: opening the add-on's **console panel**
+currently loads two JavaScript libraries (`hls.js`, `heic2any`) from the jsDelivr
+CDN, so your browser makes two third-party requests when you view that page.
+Neither is used by anything in the open codebase — they serve pages that only
+exist in the closed Dashie build which vendors that console as its core, and
+they are being moved to that build's delta. **This integration makes no such
+request**; it is the add-on panel's HTML in your browser. No audio, transcript,
+or account data is involved.
+
 ## Bring-your-own-key
 
 Audio and text go to **the providers you configured** (e.g. Google, OpenAI,
