@@ -2,6 +2,37 @@
 
 All notable changes to the Chickadee integration.
 
+## 0.6.0 — 2026-07-29
+
+### Added
+- **Satellite wake word** — ships two custom microWakeWord models (`chickadee`,
+  `hey_dashie`) and deploys the selected one to `/share/microwakeword/` so the
+  standard `wyoming-microwakeword` add-on can serve it. Community words (Okay
+  Nabu, Hey Jarvis, Alexa) are referenced by name and deploy nothing. The Assist
+  pipeline's wake stage is wired automatically, and self-heals if the
+  wyoming-microwakeword add-on is installed *after* Chickadee.
+  Model provenance + license: `custom_components/chickadee/wake_models/README.md`.
+
+### Security
+- **Brain-issued HA service calls are now gated.** `conversation.py` passed the
+  brain's `{domain, service}` straight into `hass.services.async_call`, with only
+  the action category and command name checked — so a response naming
+  `shell_command.*`, `hassio.host_reboot` or `homeassistant.stop` would execute,
+  as would a call against an entity you had deliberately not exposed. Model
+  output is untrusted input (it can be prompt-injected through a calendar title,
+  a media title, or an entity's own `friendly_name`), so two layers now apply:
+  a domain allowlist, and an Assist-exposure check on every target entity.
+  Rejections log a `DROP:` marker. This makes "the brain sees your Assist-exposed
+  entities (and only those)" true for *actions* as well as context.
+
+### Fixed
+- This repo is once again the true source of the shipped integration: the
+  satellite-wake modules had been authored directly in the add-on repo's
+  vendored copy, so they existed in no commit here — and `sync-integration.sh`
+  (`rm -rf` + `git archive origin/main`) would have deleted them from the add-on
+  at the next release. Re-converged, with the add-on copy's stale
+  `addon_bridge.py` dropped in favour of this repo's dev-slug fix.
+
 ## 0.5.0 — 2026-07-27
 
 ### Added
