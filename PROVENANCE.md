@@ -25,6 +25,17 @@ the open project is funded by an optional hosted convenience —
 **Chickadee Cloud**, metered credits, no subscription — plus the separate
 Dashie product. Nothing in Chickadee is feature-gated on paying.
 
+**What Chickadee Cloud runs, and what isn't published** — the cloud runs the
+same brain core that's in the [main repo](https://github.com/jwlerch78/chickadee),
+with a different I/O shell; the HTTP entry point, auth/DB layer, metering, and
+the vendor-key-holding proxies are not published. Why that isn't an AGPL §13
+dodge (short version: we're the sole copyright holder, and the withheld code
+is bindings to our infrastructure that wouldn't help you self-host) is written
+out in
+[the canonical PROVENANCE](https://github.com/jwlerch78/chickadee/blob/main/PROVENANCE.md#what-chickadee-cloud-runs--and-what-isnt-published).
+None of it applies to this repo — the integration is published in full, and it
+talks to whatever pipeline you point it at.
+
 ## Where each piece is developed
 
 | Piece | Canonical home | Notes |
