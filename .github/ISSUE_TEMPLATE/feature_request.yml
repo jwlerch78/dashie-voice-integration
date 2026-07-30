@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement to the Chickadee integration
+description: Suggest an improvement to the Dashie Voice integration
 labels: ["enhancement"]
 body:
   - type: textarea

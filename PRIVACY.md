@@ -1,4 +1,4 @@
-<!-- MIRRORED FILE — canonical copy: https://github.com/jwlerch78/chickadee/blob/main/PRIVACY.md
+<!-- MIRRORED FILE — canonical copy: https://github.com/jwlerch78/dashie-ha-console/blob/main/PRIVACY.md
      Kept here because HACS installs this repo, and the disclosure has to be in the
      repo you actually install from. Edit the canonical copy, then mirror; if the two
      ever disagree, the canonical one wins. -->
@@ -34,14 +34,14 @@ servers are not involved. Your keys are stored on-box only
 are excluded from HA backups (`backup_exclude`).
 
 One credential this does **not** cover: the add-on↔integration bridge secret
-is also mirrored to `<config>/.chickadee/bridge_secret`, which is in your HA
+is also mirrored to `<config>/.dashie_voice/bridge_secret`, which is in your HA
 config directory and therefore **is** included in HA backups —
 `backup_exclude` only reaches `/data`. It's a same-box credential (nothing is
 exposed on your LAN), but while signed in it can be exchanged for your
 household account token, so it's worth more than the name suggests. Details
 and the reset in the add-on's DOCS → "How the bridge auth works".
 
-## Chickadee Cloud (signed in)
+## Dashie Cloud (signed in)
 
 When you leave an engine blank while signed in, that stage runs on hosted
 engines under your account:

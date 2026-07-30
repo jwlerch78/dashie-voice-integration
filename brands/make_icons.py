@@ -1,14 +1,14 @@
-"""Generate the Chickadee mark — "Tech Accent" style (John's pick, 2026-07-25):
+"""Generate the Dashie Voice mark — "Tech Accent" style (John's pick, 2026-07-25):
 white bird head + black cap + blue wing accent on a dark round badge, with a
 rounded lowercase wordmark and the blue tagline "voice & ai, plug and play".
 
 Outputs:
-  chickadee-addons/chickadee/icon.png        (256x256, badge)
-  chickadee-addons/chickadee/logo.png        (500 wide, mark + wordmark + tagline)
-  chickadee/brands/custom_integrations/chickadee/icon.png     (256x256)
-  chickadee/brands/custom_integrations/chickadee/icon@2x.png  (512x512)
-  chickadee/brands/custom_integrations/chickadee/logo.png     (512 wide)
-  chickadee/brands/custom_integrations/chickadee/logo@2x.png  (1024 wide)
+  dashie-ha-console/dashie-ha/icon.png        (256x256, badge)
+  dashie-ha-console/dashie-ha/logo.png        (500 wide, mark + wordmark + tagline)
+  dashie-voice-integration/brands/custom_integrations/dashie_voice/icon.png     (256x256)
+  dashie-voice-integration/brands/custom_integrations/dashie_voice/icon@2x.png  (512x512)
+  dashie-voice-integration/brands/custom_integrations/dashie_voice/logo.png     (512 wide)
+  dashie-voice-integration/brands/custom_integrations/dashie_voice/logo@2x.png  (1024 wide)
 """
 from PIL import Image, ImageDraw, ImageFont
 import math, os
@@ -96,8 +96,8 @@ def make_logo():
 badge = make_badge()
 logo = make_logo()
 
-ADDON = "/Users/johnlerch/projects/chickadee-addons/chickadee"
-BRANDS = "/Users/johnlerch/projects/chickadee/brands/custom_integrations/chickadee"
+ADDON = "/Users/johnlerch/projects/dashie-ha-console/dashie-ha"
+BRANDS = "/Users/johnlerch/projects/dashie-voice-integration/brands/custom_integrations/dashie_voice"
 os.makedirs(BRANDS, exist_ok=True)
 
 badge.resize((256, 256), Image.LANCZOS).save(f"{ADDON}/icon.png")

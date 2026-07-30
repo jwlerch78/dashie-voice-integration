@@ -1,5 +1,5 @@
 name: Satellite compatibility report
-description: Tell us how Chickadee runs on your satellite hardware (works great counts too!)
+description: Tell us how Dashie Voice runs on your satellite hardware (works great counts too!)
 labels: ["compat-report"]
 body:
   - type: markdown
@@ -28,7 +28,7 @@ body:
     id: setup
     attributes:
       label: Pipeline + engines
-      description: Which stages use Chickadee and what engines/models the add-on points at (no keys).
+      description: Which stages use Dashie Voice and what engines/models the add-on points at (no keys).
     validations:
       required: true
   - type: textarea

@@ -1,7 +1,7 @@
 # Chickadee — the integration
 
 > **Just want Chickadee?** Head to the main repo:
-> **[github.com/jwlerch78/chickadee](https://github.com/jwlerch78/chickadee)** —
+> **[github.com/jwlerch78/dashie-ha-console](https://github.com/jwlerch78/dashie-ha-console)** —
 > the add-on there installs and updates this integration for you, one URL,
 > no HACS needed. This repository is the engine room: integration source,
 > architecture, and the manual/HACS install path for people who prefer to
@@ -23,10 +23,10 @@ transcription, understanding, real smart-home actions, and speech back out.
 
 Two pieces, installed together:
 
-- **This integration** (`chickadee`) — the Assist-pipeline surface: a
+- **This integration** (`dashie_voice`) — the Assist-pipeline surface: a
   `conversation` entity, an `stt` entity, and a `tts` entity. Thin by design; it
   contains no engine logic.
-- **The [Chickadee add-on](https://github.com/jwlerch78/chickadee)** — the
+- **The [Dashie for Home Assistant add-on](https://github.com/jwlerch78/dashie-ha-console)** — the
   brain runtime. It routes each stage of the pipeline to any OpenAI-compatible
   endpoint you configure: a local model server, a cloud provider with your own key,
   or a mix (local STT + cloud LLM is a great combination). The integration talks to
@@ -38,9 +38,9 @@ satellite (Voice PE / ESPHome / tablet / browser card)
         ▼
 HA Assist pipeline
         │
-        ├── stt.chickadee ───────► Chickadee add-on ──► your STT engine
-        ├── conversation.chickadee ► Chickadee add-on ──► your LLM  ──► HA actions
-        └── tts.chickadee ───────► Chickadee add-on ──► your TTS engine
+        ├── stt.dashie_voice ───────► Dashie for Home Assistant add-on ──► your STT engine
+        ├── conversation.dashie_voice ► Dashie for Home Assistant add-on ──► your LLM  ──► HA actions
+        └── tts.dashie_voice ───────► Dashie for Home Assistant add-on ──► your TTS engine
 ```
 
 The conversation brain sees your Assist-**exposed** entities (and only those),
@@ -52,7 +52,7 @@ This is a young project. Here's the honest line between shipped and planned:
 
 **Verified, end-to-end on a real HAOS box:**
 
-- Full audio-in → action → audio-out Assist pipeline through all three Chickadee
+- Full audio-in → action → audio-out Assist pipeline through all three Dashie Voice
   entities (measured **~8 s** wake-to-response with LAN-hosted engines: Whisper
   STT ≈ 1.5 s, LLM ≈ 3 s, Kokoro TTS ≈ 3 s).
 - Bring-your-own engines over the OpenAI-compatible API: Ollama, llama.cpp, vLLM,
@@ -61,7 +61,7 @@ This is a young project. Here's the honest line between shipped and planned:
 - Real smart-home actions against exposed entities ("turn on the dining room
   light"), including multi-step commands.
 
-- **Chickadee Cloud** — the optional hosted engine option, for people who don't
+- **Dashie Cloud** — the optional hosted engine option, for people who don't
   want to run or key their own models. Sign in from the add-on's panel and any
   engine you leave blank runs hosted, metered against a prepaid credit balance.
   It is opt-in and never a fallback: with no account and no engine configured,
@@ -100,7 +100,7 @@ Two honest notes:
 
 ### The easy way (recommended)
 
-Follow the [main repo](https://github.com/jwlerch78/chickadee): install the
+Follow the [main repo](https://github.com/jwlerch78/dashie-ha-console): install the
 add-on, and it installs this integration automatically, keeps it updated with
 add-on releases, and walks you through the one restart + one click of setup.
 (The auto-installer marks its copy and will never touch a HACS or manual
@@ -108,43 +108,43 @@ install it didn't create.)
 
 ### The manual way (HACS)
 
-1. Install the [add-on](https://github.com/jwlerch78/chickadee) (the brain) and
+1. Install the [add-on](https://github.com/jwlerch78/dashie-ha-console) (the brain) and
    set `install_integration: false` in its configuration if you want HACS to
    own the integration.
 2. HACS → **⋮ → Custom repositories** → add
-   `https://github.com/jwlerch78/chickadee-integration`, type **Integration**
-3. Install **Chickadee**, restart Home Assistant.
+   `https://github.com/jwlerch78/dashie-voice-integration`, type **Integration**
+3. Install **Dashie Voice**, restart Home Assistant.
 
-*(No HACS? Copy `custom_components/chickadee/` into your
+*(No HACS? Copy `custom_components/dashie_voice/` into your
 `config/custom_components/` and restart.)*
 
 ### Add the integration
 
-Settings → Devices & Services → **Add integration → Chickadee**. The flow checks
+Settings → Devices & Services → **Add integration → Dashie Voice**. The flow checks
 the add-on is reachable and asks what to call your assistant. If you installed the
 integration first, choose "Set up anyway" and it will find the add-on when it's up.
 
 Setup creates a ready-to-use Assist pipeline wired to the Chickadee
 conversation/STT/TTS entities — point your satellites at it and talk. It's never
-marked as your preferred pipeline, and an existing Chickadee pipeline is left
+marked as your preferred pipeline, and an existing Dashie Voice pipeline is left
 untouched.
 
 ### 4. Or assemble the pipeline yourself
 
 Prefer to mix stages? Settings → Voice assistants → **Add assistant**:
 
-- **Conversation agent:** Chickadee
-- **Speech-to-text:** Chickadee (or keep Whisper/HA Cloud if you prefer)
-- **Text-to-speech:** Chickadee (or keep Piper/HA Cloud)
+- **Conversation agent:** Dashie Voice
+- **Speech-to-text:** Dashie Voice (or keep Whisper/HA Cloud if you prefer)
+- **Text-to-speech:** Dashie Voice (or keep Piper/HA Cloud)
 
-Each stage is independent — local Whisper with a Chickadee brain is a fine
+Each stage is independent — local Whisper with a Dashie brain is a fine
 pipeline.
 
 ## Configuring engines
 
-All engine configuration lives in the **add-on** (Settings → Add-ons → Chickadee →
+All engine configuration lives in the **add-on** (Settings → Add-ons → Dashie for Home Assistant →
 Configuration) — the integration stays thin. Quick reference; full details in the
-add-on's [Documentation tab](https://github.com/jwlerch78/chickadee/blob/main/chickadee/DOCS.md):
+add-on's [Documentation tab](https://github.com/jwlerch78/dashie-ha-console/blob/main/dashie-ha/DOCS.md):
 
 | Stage | Options | Examples |
 |---|---|---|

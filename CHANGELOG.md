@@ -1,6 +1,39 @@
 # Changelog
 
-All notable changes to the Chickadee integration.
+All notable changes to the Dashie Voice integration (named "Chickadee" before 0.7.0).
+
+## 0.7.0 — 2026-07-30
+
+### Changed — BREAKING
+- **Integration domain renamed `chickadee` → `dashie_voice`**, part of the
+  one-brand consolidation (Chickadee is retired; this is the voice/Assist
+  surface of *Dashie for Home Assistant*). This is a different integration from
+  `dashie` (v1.4.x, `device`/`local_polling`) and does not replace it.
+
+  Nothing had shipped under the old domain, which is why the rename happened now
+  — a domain is baked into every entity id the moment anyone installs it.
+
+  Entity ids change accordingly: `conversation.chickadee` → `conversation.dashie_voice`,
+  `stt.chickadee` → `stt.dashie_voice`, `tts.chickadee` → `tts.dashie_voice`.
+  Remove the old config entry and re-add the integration.
+
+- Renamed alongside the domain, all of which move together with the add-on:
+  - bridge auth header `X-Chickadee-Bridge-Secret` → `X-Dashie-Voice-Bridge-Secret`
+  - brain-route response header `X-Chickadee-Brain-Route` → `X-Dashie-Voice-Brain-Route`
+    (the `X-Dashie-Brain-Route` twin is unchanged — it is a wire contract with
+    shipped Dashie APKs)
+  - canonical gateway paths `/api/chickadee/...` → `/api/dashie_voice/...`
+    (the `/api/dashie/...` legacy aliases are unchanged, same reason)
+  - bridge-secret fallback file `<config>/.chickadee/` → `<config>/.dashie_voice/`
+  - add-on install marker `.installed_by_chickadee_addon` → `.installed_by_dashie_ha_addon`
+  - same-box add-on candidates now target the `dashie_ha` / `dashie_ha_dev` slugs
+- Default assistant name is now **Dashie**.
+- Repo renamed to `jwlerch78/dashie-voice-integration` (GitHub redirects the old URL).
+
+### Note
+- The `chickadee` **wake word model** is unchanged and still selectable — the
+  weights are real and predate the rename. It is no longer any build's default;
+  `hey_dashie` is.
 
 ## 0.6.0 — 2026-07-29
 
@@ -11,7 +44,7 @@ All notable changes to the Chickadee integration.
   Nabu, Hey Jarvis, Alexa) are referenced by name and deploy nothing. The Assist
   pipeline's wake stage is wired automatically, and self-heals if the
   wyoming-microwakeword add-on is installed *after* Chickadee.
-  Model provenance + license: `custom_components/chickadee/wake_models/README.md`.
+  Model provenance + license: `custom_components/dashie_voice/wake_models/README.md`.
 
 ### Security
 - **Brain-issued HA service calls are now gated.** `conversation.py` passed the
@@ -36,14 +69,14 @@ All notable changes to the Chickadee integration.
 ## 0.5.0 — 2026-07-27
 
 ### Added
-- **Canonical `/api/chickadee/voice/*` paths** — every gateway view now serves
-  `/api/chickadee/voice/status|converse|session|live-token` and
-  `/api/chickadee/account/authorize`; the `/api/dashie/...` paths remain as
+- **Canonical `/api/dashie_voice/voice/*` paths** — every gateway view now serves
+  `/api/dashie_voice/voice/status|converse|session|live-token` and
+  `/api/dashie_voice/account/authorize`; the `/api/dashie/...` paths remain as
   legacy aliases for shipped Dashie apps (same handlers).
-- `X-Chickadee-Brain-Route` response header (canonical twin of
+- `X-Dashie-Voice-Brain-Route` response header (canonical twin of
   `X-Dashie-Brain-Route`, which stays for compatibility).
 - SPDX license headers on every module + LICENSE shipped inside
-  `custom_components/chickadee/` (so auto-installed copies carry it).
+  `custom_components/dashie_voice/` (so auto-installed copies carry it).
 
 ### Changed
 - Cloud brain / STT-token URLs are no longer hardcoded to one environment:
@@ -60,22 +93,22 @@ All notable changes to the Chickadee integration.
   credentials silently, and fresh installs get a one-tap confirm flow.
 - **Native voice picker** — the TTS entity exposes the engine's voice catalog,
   so pipeline voice selection is a dropdown instead of a text field.
-- TTS audio format now follows the engine (hosted Chickadee Cloud voices are
+- TTS audio format now follows the engine (hosted Dashie Cloud voices are
   MP3; BYO servers stay WAV).
 
 ## 0.2.0 — 2026-07-25
 
 ### Added
 - **Auto-created Assist pipeline** — setting up the integration creates a
-  ready-to-use pipeline wired to the Chickadee conversation/STT/TTS entities.
+  ready-to-use pipeline wired to the Dashie Voice conversation/STT/TTS entities.
   Idempotent (an existing pipeline referencing a Chickadee entity is left
   untouched), never marked preferred, and failures warn loudly without blocking
   setup — the manual assembly path always works.
 - **Options flow** — rename the assistant after setup; the form surfaces add-on
   reachability.
-- **STT entity** (`stt.chickadee`) — streams pipeline audio to the add-on's
+- **STT entity** (`stt.dashie_voice`) — streams pipeline audio to the add-on's
   configured transcription engine (16 kHz mono PCM WAV).
-- **TTS entity** (`tts.chickadee`) — synthesizes responses via the add-on's
+- **TTS entity** (`tts.dashie_voice`) — synthesizes responses via the add-on's
   configured speech engine, with per-pipeline voice override.
 - **Assistant-name persona** — the configured assistant name is passed to the
   brain and rendered into its persona; absent, the brain default applies.
@@ -91,12 +124,12 @@ All notable changes to the Chickadee integration.
 First working version (not separately released).
 
 ### Added
-- **Conversation entity** (`conversation.chickadee`) — routes Assist turns to
-  the Chickadee add-on brain; executes real smart-home actions against your
+- **Conversation entity** (`conversation.dashie_voice`) — routes Assist turns to
+  the Dashie for Home Assistant add-on brain; executes real smart-home actions against your
   Assist-exposed entities, including multi-step commands.
-- **Add-on bridge** — same-box discovery of the Chickadee add-on with
-  shared-secret auth enforced from birth (`X-Chickadee-Bridge-Secret`); secret
-  provisioned by the add-on at `<ha-config>/.chickadee/bridge_secret`.
+- **Add-on bridge** — same-box discovery of the Dashie for Home Assistant add-on with
+  shared-secret auth enforced from birth (`X-Dashie-Voice-Bridge-Secret`); secret
+  provisioned by the add-on at `<ha-config>/.dashie_voice/bridge_secret`.
 - **Exposed-entity context** — the brain sees exactly your Assist-exposed
   entities (id, domain, name, state, area, aliases), nothing else.
 - **Config flow** — single-instance setup: add-on reachability probe (warn,

@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in the Chickadee integration isn't working
+description: Something in the Dashie Voice integration isn't working
 labels: ["bug"]
 body:
   - type: markdown
@@ -7,7 +7,7 @@ body:
       value: |
         Thanks for the report! If the problem is in the **add-on** (engine routing,
         model errors, add-on won't start), please file it at
-        [chickadee-addons](https://github.com/jwlerch78/chickadee-addons/issues) instead.
+        [dashie-ha-console](https://github.com/jwlerch78/dashie-ha-console/issues) instead.
   - type: textarea
     id: what-happened
     attributes:
@@ -23,17 +23,17 @@ body:
     validations:
       required: true
   - type: input
-    id: chickadee-version
+    id: dashie-voice-version
     attributes:
-      label: Chickadee integration version
+      label: Dashie Voice integration version
       placeholder: e.g. 0.1.0
     validations:
       required: true
   - type: input
     id: addon-version
     attributes:
-      label: Chickadee add-on version
-      placeholder: e.g. 0.2.0 (Settings → Add-ons → Chickadee)
+      label: Dashie for Home Assistant add-on version
+      placeholder: e.g. 0.2.0 (Settings → Add-ons → Dashie for Home Assistant)
   - type: input
     id: satellite
     attributes:
@@ -43,17 +43,17 @@ body:
     id: pipeline
     attributes:
       label: Pipeline setup
-      description: Which stages use Chickadee (conversation / STT / TTS) and what engines the add-on is pointed at (no keys!).
+      description: Which stages use Dashie Voice (conversation / STT / TTS) and what engines the add-on is pointed at (no keys!).
       placeholder: |
-        conversation: Chickadee → Ollama qwen2.5:7b on LAN box
-        stt: Chickadee → faster-whisper on LAN box
+        conversation: Dashie Voice → Ollama qwen2.5:7b on LAN box
+        stt: Dashie Voice → faster-whisper on LAN box
         tts: Piper (HA add-on)
   - type: textarea
     id: logs
     attributes:
       label: Logs
       description: |
-        Relevant lines from Settings → System → Logs (filter "chickadee") and the
-        add-on log (look for CHICKADEE-TURN / CHICKADEE-STT / CHICKADEE-TTS / DROP markers).
+        Relevant lines from Settings → System → Logs (filter "dashie_voice") and the
+        add-on log (look for DASHIE-TURN / DASHIE-STT / DASHIE-TTS / DROP markers).
         Redact anything sensitive.
       render: text
