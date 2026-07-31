@@ -1,21 +1,19 @@
-# Chickadee — the integration
+# Dashie Voice — the integration
 
-> **Just want Chickadee?** Head to the main repo:
+> **Just want it working?** Head to the main repo:
 > **[github.com/jwlerch78/dashie-ha-console](https://github.com/jwlerch78/dashie-ha-console)** —
 > the add-on there installs and updates this integration for you, one URL,
 > no HACS needed. This repository is the engine room: integration source,
 > architecture, and the manual/HACS install path for people who prefer to
 > manage components themselves.
 
-**Chickadee gives your Assist pipeline a real brain.** One integration provides a
+**Dashie Voice gives your Assist pipeline a real brain.** One integration provides a
 conversation agent, STT, and TTS for Home Assistant — backed by whatever you want:
 your own API keys, a local box (Ollama / Whisper / Piper / Kokoro), or a hosted
 option. Works with every satellite you already have.
 
-> Named for the bird that says its own name.
-
 Wake word is a satellite capability — your Voice PE, ESPHome satellite, tablet, or
-browser card does its own wake detection and streams into the pipeline. **Chickadee
+browser card does its own wake detection and streams into the pipeline. **Dashie Voice
 begins where the wake word ends**: it turns the audio that arrives into
 transcription, understanding, real smart-home actions, and speech back out.
 
@@ -78,10 +76,10 @@ This is a young project. Here's the honest line between shipped and planned:
 
 ## Compatibility matrix
 
-Chickadee is pipeline-side, so it works with any satellite that can run an Assist
+Dashie Voice is pipeline-side, so it works with any satellite that can run an Assist
 pipeline. What differs is what each satellite itself brings:
 
-| Satellite | Assist pipeline (Chickadee) | Native wake word (screen-off) | Kiosk management | Realtime speech-to-speech |
+| Satellite | Assist pipeline (Dashie Voice) | Native wake word (screen-off) | Kiosk management | Realtime speech-to-speech |
 |---|---|---|---|---|
 | **HA Voice PE / ESPHome satellites** | ✅ | ✅ on-device (microWakeWord / openWakeWord) | — | ❌ |
 | **Dashie app** (Android tablets / TV) | ✅ | ✅ on-device wake | ✅ built-in | ✅ (the only satellite we know of with realtime audio today) |
@@ -93,7 +91,7 @@ Two honest notes:
 - **Realtime speech-to-speech** (continuous conversation, barge-in) cannot ride
   Assist's cascade protocol for *anyone* — it needs a satellite that supports
   realtime audio end-to-end. Today that's the Dashie app; we'd love to see more.
-- **Kiosk management** is out of scope for Chickadee itself — the column shows
+- **Kiosk management** is out of scope for Dashie Voice itself — the column shows
   what the satellite provides on its own.
 
 ## Installation
@@ -124,7 +122,7 @@ Settings → Devices & Services → **Add integration → Dashie Voice**. The fl
 the add-on is reachable and asks what to call your assistant. If you installed the
 integration first, choose "Set up anyway" and it will find the add-on when it's up.
 
-Setup creates a ready-to-use Assist pipeline wired to the Chickadee
+Setup creates a ready-to-use Assist pipeline wired to the Dashie Voice
 conversation/STT/TTS entities — point your satellites at it and talk. It's never
 marked as your preferred pipeline, and an existing Dashie Voice pipeline is left
 untouched.
@@ -168,7 +166,7 @@ Full statement: **[PRIVACY.md](PRIVACY.md)**. The short version:
 - Audio and text go only to the engine endpoints **you** configure. Point
   everything at LAN servers and nothing leaves your network — that is a real,
   supported mode, not a theoretical one, and it needs no account.
-- **If you sign in and leave an engine blank, that stage runs on Chickadee
+- **If you sign in and leave an engine blank, that stage runs on Dashie
   Cloud** — so in that configuration audio or text does leave your network, to
   us and to the provider behind that stage. That's the trade you opt into;
   [PRIVACY.md](PRIVACY.md) says exactly what is sent, what is stored, and for
@@ -188,12 +186,12 @@ changes (integration ↔ add-on) must update [CONTRACTS.md](CONTRACTS.md).
 
 One maintainer, **heavily AI-assisted and human-reviewed**, on top of a voice
 stack that has been running in real households since 2025 — which is why the
-public history is short and fast. Chickadee is built and operated by the makers
-of [Dashie](https://dashieapp.com), a closed-source commercial family dashboard
-for Home Assistant; [PROVENANCE.md](PROVENANCE.md) sets out that relationship
-in full, including why some identifiers still say `dashie` and how the money
-works. What leaves your box, per mode, is in [PRIVACY.md](PRIVACY.md).
+public history is short and fast. Dashie for Home Assistant is built and operated
+by the maker of [Dashie](https://dashieapp.com) — one product, two editions: this
+voice/AI pipeline is free and self-hostable, the tablet/TV app is the commercial
+one. [PROVENANCE.md](PROVENANCE.md) sets out that relationship in full, including
+how the money works. What leaves your box, per mode, is in [PRIVACY.md](PRIVACY.md).
 
 ## License
 
-[AGPL-3.0](LICENSE). Operated by the makers of [Dashie](https://dashieapp.com).
+[AGPL-3.0](LICENSE). Built and operated by the maker of [Dashie](https://dashieapp.com).

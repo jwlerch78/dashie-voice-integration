@@ -1,115 +1,70 @@
-"""Generate the Dashie Voice mark — "Tech Accent" style (John's pick, 2026-07-25):
-white bird head + black cap + blue wing accent on a dark round badge, with a
-rounded lowercase wordmark and the blue tagline "voice & ai, plug and play".
+#!/usr/bin/env python3
+"""Derive the home-assistant/brands images for `dashie_voice` from the add-on art.
 
-Outputs:
-  dashie-ha-console/dashie-ha/icon.png        (256x256, badge)
-  dashie-ha-console/dashie-ha/logo.png        (500 wide, mark + wordmark + tagline)
-  dashie-voice-integration/brands/custom_integrations/dashie_voice/icon.png     (256x256)
-  dashie-voice-integration/brands/custom_integrations/dashie_voice/icon@2x.png  (512x512)
-  dashie-voice-integration/brands/custom_integrations/dashie_voice/logo.png     (512 wide)
-  dashie-voice-integration/brands/custom_integrations/dashie_voice/logo@2x.png  (1024 wide)
+The brands images are NOT independently drawn. They are the same Dashie mark and
+wordmark the add-on ships, resized to the sizes brands wants — that is the whole
+point: HA renders this icon next to an add-on the user just installed, and the two
+must not be two different pictures.
+
+Until 2026-07-30 this script drew a bird and the wordmark "chickadee" from scratch,
+because that was a separate brand with its own art. The brand is retired (one
+product, two editions), so the drawing code is gone and the add-on PNGs
+(`dashie-ha/icon.png`, `dashie-ha/logo.png`) are now the single source.
+
+Usage (from the repo root):
+
+    python3 brands/make_icons.py [path/to/dashie-ha-console]
+
+Writes brands/custom_integrations/dashie_voice/{icon,icon@2x,logo,logo@2x}.png.
 """
-from PIL import Image, ImageDraw, ImageFont
-import math, os
 
-S = 1024  # master canvas
+import sys
+from pathlib import Path
 
-DARK = (22, 24, 29, 255)       # badge background
-CAP = (14, 15, 18, 255)        # cap/beak black
-WHITE = (255, 255, 255, 255)   # face
-BLUE = (61, 125, 219, 255)     # wing accent + tagline
-INKTEXT = (26, 28, 34, 255)    # wordmark
+from PIL import Image
 
-def draw_bird_e(d, cx, cy, r):
-    """Column-E bird: white-outlined head, black cap chord, blue wing, bold beak."""
-    # white outline ring so the cap reads against a dark badge
-    o = r * 0.09
-    d.ellipse((cx - r - o, cy - r - o, cx + r + o, cy + r + o), fill=WHITE)
-    bbox = (cx - r, cy - r, cx + r, cy + r)
-    # white head
-    d.ellipse(bbox, fill=WHITE)
-    # blue wing accent: curved crescent hugging the lower-left edge —
-    # a chord lens cut by an offset white circle
-    ib = (cx - r * 0.99, cy - r * 0.99, cx + r * 0.99, cy + r * 0.99)
-    d.chord(ib, 88, 192, fill=BLUE)
-    ccx, ccy, cr = cx + r * 0.22, cy - r * 0.16, r * 0.96
-    d.ellipse((ccx - cr, ccy - cr, ccx + cr, ccy + cr), fill=WHITE)
-    # black cap: chord across the top ~40%
-    d.chord(bbox, 192, 348, fill=CAP)
-    # eye: black dot on the white, tucked under the cap on the beak side
-    ex, ey = cx + r * 0.33, cy - r * 0.02
-    er = r * 0.105
-    d.ellipse((ex - er, ey - er, ex + er, ey + er), fill=CAP)
-    # beak: bold triangle at the right edge, at the cap junction
-    d.polygon([
-        (cx + r * 0.72, cy - r * 0.30),
-        (cx + r * 1.34, cy - r * 0.02),
-        (cx + r * 0.70, cy + r * 0.22),
-    ], fill=CAP)
+REPO = Path(__file__).resolve().parent.parent
+OUT = REPO / "brands" / "custom_integrations" / "dashie_voice"
 
-def make_badge():
-    img = Image.new("RGBA", (S, S), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    m = 24
-    # thin white rim, then dark badge
-    d.ellipse((m, m, S - m, S - m), fill=WHITE)
-    rim = 14
-    d.ellipse((m + rim, m + rim, S - m - rim, S - m - rim), fill=DARK)
-    draw_bird_e(d, S // 2 - 45, S // 2 + 15, 320)
-    return img
+# The add-on repo (jwlerch78/dashie-ha), cloned as dashie-ha-console by convention.
+DEFAULT_ADDON_REPO = Path.home() / "projects" / "dashie-ha-console"
 
-def load_font(size):
-    return ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial Rounded Bold.ttf", size)
 
-def make_logo():
-    W, H = 3600, 800
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    # mark
-    r = 300
-    cx, cy = 340, H // 2
-    d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=WHITE)
-    rim = 10
-    d.ellipse((cx - r + rim, cy - r + rim, cx + r - rim, cy + r - rim), fill=DARK)
-    draw_bird_e(d, cx - 24, cy + 4, r * 0.62)
-    # wordmark
-    f_word = load_font(360)
-    f_tag = load_font(108)
-    text = "chickadee"
-    tag = "voice & ai, plug and play"
-    tx = cx + r + 120
-    wb = d.textbbox((0, 0), text, font=f_word)
-    tb = d.textbbox((0, 0), tag, font=f_tag)
-    gap = 40
-    total_h = (wb[3] - wb[1]) + gap + (tb[3] - tb[1])
-    top = cy - total_h / 2
-    d.text((tx, top - wb[1]), text, font=f_word, fill=INKTEXT)
-    d.text((tx + 14, top + (wb[3] - wb[1]) + gap - tb[1]), tag, font=f_tag, fill=BLUE)
-    # crop to content + padding
-    bbox = img.getbbox()
-    pad = 30
-    img = img.crop((max(0, bbox[0] - pad), max(0, bbox[1] - pad),
-                    min(W, bbox[2] + pad), min(H, bbox[3] + pad)))
-    return img
+def fit(img: Image.Image, max_w: int, max_h: int) -> Image.Image:
+    w, h = img.size
+    scale = min(max_w / w, max_h / h)
+    return img.resize((round(w * scale), round(h * scale)), Image.LANCZOS)
 
-badge = make_badge()
-logo = make_logo()
 
-ADDON = "/Users/johnlerch/projects/dashie-ha-console/dashie-ha"
-BRANDS = "/Users/johnlerch/projects/dashie-voice-integration/brands/custom_integrations/dashie_voice"
-os.makedirs(BRANDS, exist_ok=True)
+def main() -> int:
+    addon = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_ADDON_REPO
+    src = addon / "dashie-ha"
+    icon_src, logo_src = src / "icon.png", src / "logo.png"
+    for p in (icon_src, logo_src):
+        if not p.is_file():
+            print(f"missing source art: {p}", file=sys.stderr)
+            print("pass the add-on repo path as argv[1]", file=sys.stderr)
+            return 1
 
-badge.resize((256, 256), Image.LANCZOS).save(f"{ADDON}/icon.png")
-lw, lh = logo.size
-logo.resize((500, int(lh * 500 / lw)), Image.LANCZOS).save(f"{ADDON}/logo.png")
+    OUT.mkdir(parents=True, exist_ok=True)
 
-badge.resize((256, 256), Image.LANCZOS).save(f"{BRANDS}/icon.png")
-badge.resize((512, 512), Image.LANCZOS).save(f"{BRANDS}/icon@2x.png")
-logo.resize((512, int(lh * 512 / lw)), Image.LANCZOS).save(f"{BRANDS}/logo.png")
-logo.resize((1024, int(lh * 1024 / lw)), Image.LANCZOS).save(f"{BRANDS}/logo@2x.png")
+    icon = Image.open(icon_src).convert("RGBA")
+    if icon.size[0] != icon.size[1]:
+        print(f"icon source is not square: {icon.size}", file=sys.stderr)
+        return 1
+    icon.resize((256, 256), Image.LANCZOS).save(OUT / "icon.png")
+    icon.resize((512, 512), Image.LANCZOS).save(OUT / "icon@2x.png")
 
-SCRATCH = os.path.dirname(os.path.abspath(__file__))
-badge.resize((256, 256), Image.LANCZOS).save(f"{SCRATCH}/preview_icon.png")
-logo.resize((900, int(lh * 900 / lw)), Image.LANCZOS).save(f"{SCRATCH}/preview_logo.png")
-print("done", logo.size)
+    # brands wants the logo trimmed to its content, no baked-in padding.
+    logo = Image.open(logo_src).convert("RGBA")
+    logo = logo.crop(logo.getbbox())
+    fit(logo, 512, 256).save(OUT / "logo.png")
+    fit(logo, 1024, 512).save(OUT / "logo@2x.png")
+
+    for name in ("icon.png", "icon@2x.png", "logo.png", "logo@2x.png"):
+        print(f"{name}: {Image.open(OUT / name).size}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
