@@ -7,11 +7,20 @@ household voice through these views; they proxy to the Dashie for Home Assistant
 /api/internal/* (account credential, sharing gate) and to the cloud brain on
 the account's behalf.
 
-Every view serves TWO paths: the canonical `/api/dashie_voice/...` and a
-`/api/dashie/...` legacy alias. The alias is a compatibility contract with
-shipped Dashie APKs (a path is a wire value — same rule as the `dashie_cloud`
-engine id) and must never be removed while those apps are in the field; both
-paths hit the same handler. Ownership: when the Dashie Voice integration is
+Every view serves TWO paths: the canonical `/api/dashie_voice/...` and
+`/api/dashie/...`. Both hit the same handler.
+
+⚠️ The second is NOT merely a legacy alias, though it was described as one here
+for a while and that description nearly got it deleted from a branded build. It
+is the CROSS-INTEGRATION CANONICAL PATH: the device integration serves
+`/api/dashie/voice/*` natively, and this integration claims the same path on top
+of its own — which is exactly why the cede handshake below has to exist. Remove
+it and cede leaves that path served by NOBODY: the device half stands down, this
+half never claims it, and a caller gets a 404 with both integrations healthy.
+
+It is also a compatibility contract with shipped Dashie APKs (a path is a wire
+value — same rule as the `dashie_cloud` engine id), so it must never be removed
+while those apps are in the field. Two reasons, either one sufficient. Ownership: when the Dashie Voice integration is
 configured it registers these views and the Dashie integration cedes (its
 __init__ checks our config entries); see async_register_voice_views.
 
@@ -135,7 +144,7 @@ class DashieVoiceConverseView(HomeAssistantView):
     """Authed by the HA token; calls the brain on the account's behalf."""
 
     url = "/api/dashie_voice/voice/converse"
-    extra_urls = ["/api/dashie/voice/converse"]  # legacy alias (shipped Dashie APKs)
+    extra_urls = ["/api/dashie/voice/converse"]  # cross-integration path (see module docstring)
     name = "api:dashie_voice:voice:converse"
     requires_auth = True
 
@@ -225,7 +234,7 @@ class DashieVoiceStatusView(HomeAssistantView):
     """Capability probe — can this HA offer household cloud voice to LAN endpoints?"""
 
     url = "/api/dashie_voice/voice/status"
-    extra_urls = ["/api/dashie/voice/status"]  # legacy alias (shipped Dashie APKs)
+    extra_urls = ["/api/dashie/voice/status"]  # cross-integration path (see module docstring)
     name = "api:dashie_voice:voice:status"
     requires_auth = True
 
@@ -283,7 +292,7 @@ class DashieVoiceSessionView(HomeAssistantView):
     """Vend a short-lived STT token bundle to a LAN endpoint (sharing-gated)."""
 
     url = "/api/dashie_voice/voice/session"
-    extra_urls = ["/api/dashie/voice/session"]  # legacy alias (shipped Dashie APKs)
+    extra_urls = ["/api/dashie/voice/session"]  # cross-integration path (see module docstring)
     name = "api:dashie_voice:voice:session"
     requires_auth = True
 
@@ -340,7 +349,7 @@ class DashieVoiceAccountAuthorizeView(HomeAssistantView):
     """
 
     url = "/api/dashie_voice/account/authorize"
-    extra_urls = ["/api/dashie/account/authorize"]  # legacy alias (shipped Dashie APKs)
+    extra_urls = ["/api/dashie/account/authorize"]  # cross-integration path (see module docstring)
     name = "api:dashie_voice:account:authorize"
     requires_auth = True
 
@@ -387,7 +396,7 @@ class DashieVoiceLiveTokenView(HomeAssistantView):
     """Broker a Live-only Gemini ephemeral token from the box's stored key."""
 
     url = "/api/dashie_voice/voice/live-token"
-    extra_urls = ["/api/dashie/voice/live-token"]  # legacy alias (shipped Dashie APKs)
+    extra_urls = ["/api/dashie/voice/live-token"]  # cross-integration path (see module docstring)
     name = "api:dashie_voice:voice:live-token"
     requires_auth = True
 
