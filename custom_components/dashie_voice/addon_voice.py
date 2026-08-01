@@ -26,7 +26,7 @@ import logging
 
 from homeassistant.core import HomeAssistant
 
-from .addon_bridge import AddonUnavailable, SharingDisabled, call_addon_json
+from .addon_bridge import AddonUnavailable, SharingDisabled, call_addon_json, ping_addon
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +36,20 @@ _LIVE_TOKEN_PATH = "/api/keys/live-token"
 
 # Brain turns on modest hardware can take minutes (see addon_bridge._TIMEOUT).
 _BRAIN_TIMEOUT_S = 300
+
+
+async def get_addon_availability(hass: HomeAssistant) -> dict:
+    """Can this box serve voice at all — the answer that needs no account.
+
+    The BASE of the status probe in every build. A build with an account then
+    overlays the richer account answer (signed in? sharing on? which email?)
+    on top; a build without one stops here, and "available" means exactly what
+    it can mean there: the add-on is reachable.
+
+    Never raises.
+    """
+    ok = await ping_addon(hass)
+    return {"available": ok, "reason": "ok" if ok else "addon_unreachable"}
 
 
 async def get_voice_config(hass: HomeAssistant) -> dict:

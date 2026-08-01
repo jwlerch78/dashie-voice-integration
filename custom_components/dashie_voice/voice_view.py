@@ -48,7 +48,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .brain_target import brain_target, cloud_base, default_brain_route
 from .addon_bridge import AddonUnavailable, SharingDisabled
-from .addon_voice import converse_local, get_voice_config, mint_live_token
+from .addon_voice import (
+    converse_local,
+    get_addon_availability,
+    get_voice_config,
+    mint_live_token,
+)
 # ⚠️ THE ACCOUNT LANE — this one import is the whole of it in this file, and a
 # build with no account drops this line together with the views below that use it.
 from .account_bridge import authorize_device, get_account_credential, get_sharing_status
@@ -171,6 +176,20 @@ class DashieVoiceConverseView(HomeAssistantView):
 
         if route is None:
             route = authoritative_route
+        # A caller can still ASK for the cloud explicitly. Honour that only if
+        # this build has a cloud — otherwise the request would fall through to a
+        # lane that does not exist here. Coerce to the brain this build actually
+        # has, and say so, rather than failing at the far end of a dead path.
+        #
+        # Brand-neutral on purpose: in a build with a cloud this never fires, and
+        # in a build without one it makes the cloud tail below UNREACHABLE — which
+        # is what lets a no-account build drop that tail without changing any
+        # behaviour, instead of merely hoping nothing reaches it.
+        if route == "cloud" and not cloud_base():
+            _LOGGER.warning(
+                "DROP: caller asked for brain route 'cloud'; this build has no cloud brain — using the add-on"
+            )
+            route = "local"
         if route == "local":
             try:
                 turn, status = await converse_local(hass, payload)
@@ -237,7 +256,16 @@ class DashieVoiceStatusView(HomeAssistantView):
 
     async def get(self, request: web.Request) -> web.Response:
         hass: HomeAssistant = request.app["hass"]
+        status: dict = {}
+        # ⚠️ ACCOUNT LANE — this ONE line is the whole of it here. It fully
+        # answers the availability question when present (signed in? sharing on?
+        # which email?), which is why the base probe below is a FALLBACK and not
+        # a first step: a build with an account must not pay for both.
         status = await get_sharing_status(hass)
+        if not status:
+            # No account lane in this build: "available" means what it can mean
+            # here — the add-on is reachable.
+            status = await get_addon_availability(hass)
         agent_mode = ""
         retrieve_pictures = None
         brain_route = ""
