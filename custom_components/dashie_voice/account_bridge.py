@@ -172,13 +172,27 @@ async def converse_local(hass: HomeAssistant, payload: dict) -> tuple[dict, int]
 async def mint_live_token(hass: HomeAssistant, model: str | None = None) -> tuple[dict, int]:
     """Mint a Live-only Gemini ephemeral token from the box's stored gemini key.
 
-    Returns (body, status); raises AddonUnavailable when unreachable. Only the
-    token crosses — the raw key never leaves the box.
+    Returns (body, status) — the same order as authorize_device and converse_local,
+    which is the shape voice_view unpacks from every helper in this module. The
+    transport underneath (call_addon_json) returns (status, body); these public
+    helpers swap it, so callers see one order and only this file deals in two.
+
+    ⚠️ It DECLARED that and did not do it: it returned the transport's tuple
+    unchanged, so the caller's `status` bound to the body dict and `status < 400`
+    compared a dict to an int — TypeError, 500 on every mint. The swap below is
+    what the annotation always claimed.
+
+    Only fired through the CEDED path, which is why a device test passed: un-ceded,
+    this view is not the one serving the request.
+
+    Raises AddonUnavailable when unreachable. Only the token crosses — the raw key
+    never leaves the box.
     """
     payload: dict = {}
     if model:
         payload["model"] = model
-    return await call_addon_json(hass, _LIVE_TOKEN_PATH, method="post", payload=payload, timeout_s=15)
+    status, body = await call_addon_json(hass, _LIVE_TOKEN_PATH, method="post", payload=payload, timeout_s=15)
+    return body, status
 
 
 def _parse_expiry(iso: str | None, now: float) -> float:
