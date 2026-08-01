@@ -20,7 +20,12 @@ from homeassistant.helpers.start import async_at_started
 
 from .account_bridge import get_voice_config
 from .addon_bridge import set_bridge_config
-from .const import CONF_BRIDGE_HOST, CONF_BRIDGE_PORT, CONF_BRIDGE_SECRET
+from .const import (
+    CONF_BRIDGE_HOST,
+    CONF_BRIDGE_PORT,
+    CONF_BRIDGE_SECRET,
+    DEVICE_SIBLING_DOMAIN,
+)
 from .pipeline import async_ensure_pipeline, async_wire_wake_when_ready
 from .satellite_wake import async_deploy_wake_model
 from .voice_view import register_voice_views
@@ -37,29 +42,35 @@ _VOICE_VIEWS_KEY = "dashie_voice_views"
 def _schedule_voice_views(hass: HomeAssistant) -> None:
     """Register the /api/dashie/voice/* gateway at HA start, with ownership guard.
 
-    Those wire paths are a contract with shipped Dashie APKs. When BOTH the
-    Dashie and Dashie Voice integrations are installed, dashie_voice owns them ONLY
-    if the Dashie integration has ceded (a ceding version sets
-    hass.data['dashie']['voice_views_ceded'] instead of registering). Deciding
-    at EVENT_HOMEASSISTANT_STARTED makes the check order-independent — by then
-    every integration has set up and the cede flag, if any, exists.
+    Those wire paths are a contract with shipped Dashie APKs. When BOTH halves
+    of THIS BRAND's pair are installed, we own them ONLY if the sibling device
+    integration has ceded (a ceding version sets
+    hass.data[DEVICE_SIBLING_DOMAIN]['voice_views_ceded'] instead of
+    registering). Deciding at EVENT_HOMEASSISTANT_STARTED makes the check
+    order-independent — by then every integration has set up and the cede flag,
+    if any, exists.
+
+    Ownership is a WITHIN-brand handshake. The other brand's pair serves its own
+    route prefix, so it is never a party to this decision and must not be
+    consulted here.
     """
     if hass.data.get(_VOICE_VIEWS_KEY):
         return
     hass.data[_VOICE_VIEWS_KEY] = "scheduled"
 
     async def _decide(_hass: HomeAssistant) -> None:
-        dashie_present = bool(hass.config_entries.async_entries("dashie"))
-        dashie_data = hass.data.get("dashie")
-        ceded = isinstance(dashie_data, dict) and dashie_data.get("voice_views_ceded") is True
-        if dashie_present and not ceded:
-            # An older Dashie integration already registered the routes —
-            # double-registering would race on the same aiohttp resources.
+        sibling_present = bool(hass.config_entries.async_entries(DEVICE_SIBLING_DOMAIN))
+        sibling_data = hass.data.get(DEVICE_SIBLING_DOMAIN)
+        ceded = isinstance(sibling_data, dict) and sibling_data.get("voice_views_ceded") is True
+        if sibling_present and not ceded:
+            # An older sibling already registered the routes — double-registering
+            # would race on the same aiohttp resources.
             _LOGGER.warning(
-                "DROP: Dashie Voice gateway NOT registered — the Dashie "
+                "DROP: Dashie Voice gateway NOT registered — the %s "
                 "integration is present and has not ceded /api/dashie/voice/* "
                 "(update it to a ceding version); kiosk LAN sharing stays on "
-                "the Dashie add-on"
+                "the Dashie add-on",
+                DEVICE_SIBLING_DOMAIN,
             )
             hass.data[_VOICE_VIEWS_KEY] = "skipped"
             return
