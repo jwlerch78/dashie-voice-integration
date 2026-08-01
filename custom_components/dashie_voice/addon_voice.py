@@ -16,8 +16,8 @@ fragile kind of change: it is invisible to a residue scan, it re-breaks whenever
 the source file is edited, and the generator's block-dropper has eaten
 neighbouring code doing exactly this before.
 
-So the rule for anything added here: if it needs `get_account_credential`, the
-sharing gate, or the account JWT, it belongs in `account_bridge.py`, not here.
+So the rule for anything added here: if it needs the account credential, the
+sharing gate, or the account JWT, it belongs in the account lane, not here.
 """
 
 from __future__ import annotations
@@ -85,12 +85,15 @@ async def converse_local(hass: HomeAssistant, payload: dict) -> tuple[dict, int]
 
     The 403 is the one account-shaped thing here, and it is the ADD-ON's gate,
     not this integration's — a build with no account simply never receives one.
+    Which is why the message says what actually happened (the add-on refused)
+    rather than naming the Dashie-side reason: the exception type already
+    carries the meaning, and only one build has that reason to give.
     """
     status, body = await call_addon_json(
         hass, _CONVERSE_LOCAL_PATH, method="post", payload=payload, timeout_s=_BRAIN_TIMEOUT_S
     )
     if status == 403:
-        raise SharingDisabled("household sharing disabled")
+        raise SharingDisabled("add-on refused the local brain call (HTTP 403)")
     return body, status
 
 
