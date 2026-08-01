@@ -119,7 +119,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     # Satellite wake: deploy the household's custom wake model to /share so the
     # wyoming-microwakeword add-on can serve it. No-op for community/unset words;
-    # never raises. get_voice_config never raises (defaults to cloud/{}).
+    # never raises. get_voice_config never raises (unreadable → {}, DROP-warned).
     wake_word_id = (await get_voice_config(hass)).get("default_wake_word")
     await async_deploy_wake_model(hass, wake_word_id)
     # After platform setup so the entities exist in the registry. Best-effort:

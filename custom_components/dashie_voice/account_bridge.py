@@ -10,7 +10,9 @@ Semantics preserved from the Dashie lane (they are field-tested):
     the old JWT for days;
   - sharing re-checked (30s TTL) even on a credential cache hit, so a revoked
     toggle takes effect without waiting for JWT expiry;
-  - everything fails CLOSED on sharing and OPEN (route=cloud) on voice-config.
+  - everything fails CLOSED on sharing; voice-config fails to NO ANSWER ({}),
+    leaving the route default to the build's brain seam rather than guessing
+    a lane this build may not have.
 """
 
 from __future__ import annotations
@@ -130,14 +132,27 @@ def clear_credential_cache() -> None:
 
 
 async def get_voice_config(hass: HomeAssistant) -> dict:
-    """The account's voice route + kiosk mirror block. Never raises (default cloud)."""
+    """The account's voice route + kiosk mirror block. Never raises.
+
+    Returns `{}` when the config could not be read — NOT a guessed route. This
+    function used to fail open to `{"route": "cloud"}`, which named a lane a
+    no-cloud build does not have; callers now apply their own default, and the
+    one that needs a route asks `brain_target.default_brain_route()`, which
+    derives it from the build's brain seam.
+
+    Returning `{}` is safe for every caller: the status probe already gates on
+    `route in ("local","cloud")` and simply reports no route it could not read,
+    and the wake-word/personality readers are all `.get(...)` with fallbacks.
+    """
     try:
         status, body = await call_addon_json(hass, _VOICE_CONFIG_PATH)
-    except AddonUnavailable:
-        return {"route": "cloud"}
+    except AddonUnavailable as err:
+        _LOGGER.warning("DROP: voice-config unreadable (add-on unavailable: %s) — caller defaults apply", err)
+        return {}
     if status != 200:
-        return {"route": "cloud"}
-    return body or {"route": "cloud"}
+        _LOGGER.warning("DROP: voice-config unreadable (HTTP %s) — caller defaults apply", status)
+        return {}
+    return body or {}
 
 
 async def authorize_device(hass: HomeAssistant, user_code: str) -> tuple[dict, int]:

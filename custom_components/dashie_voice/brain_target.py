@@ -54,6 +54,23 @@ def cloud_base() -> str | None:
     return account_bridge.cloud_url() or _FALLBACK_CLOUD_BASE
 
 
+def default_brain_route() -> str:
+    """The route to ASSUME when the authoritative one cannot be read.
+
+    `get_voice_config` used to answer this itself by defaulting to "cloud" when
+    the add-on was unreachable. In a build that HAS a cloud that guess is inert
+    (the cloud lane needs an account credential from the same unreachable add-on,
+    so it fails either way). In a build that has NO cloud it is wrong on its
+    face: it names a route this build cannot take, over the add-on brain that is
+    the only one it has.
+
+    DERIVED from `cloud_base()` rather than declared, deliberately — a second
+    per-brand constant is a second thing a branded variant can forget to
+    substitute, and this seam is already exactly one constant.
+    """
+    return "cloud" if cloud_base() else "local"
+
+
 async def brain_target(
     hass: HomeAssistant, cred: str | None = None
 ) -> tuple[str, dict[str, str]]:

@@ -46,7 +46,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .brain_target import brain_target, cloud_base
+from .brain_target import brain_target, cloud_base, default_brain_route
 from .account_bridge import (
     AddonUnavailable,
     SharingDisabled,
@@ -164,7 +164,9 @@ class DashieVoiceConverseView(HomeAssistantView):
 
         # Authoritative account route stamped on every response so a device with
         # a stale cached route self-corrects next turn (brain-route strand fix).
-        authoritative_route = (await get_voice_config(hass)).get("route", "cloud")
+        # An unreadable config yields no route at all rather than a guessed
+        # "cloud" — this build's own default then applies (brain_target).
+        authoritative_route = (await get_voice_config(hass)).get("route") or default_brain_route()
         # Both header names carry the same value: X-Dashie-Voice-Brain-Route is
         # canonical, X-Dashie-Brain-Route stays for shipped Dashie APKs.
         route_header = {
