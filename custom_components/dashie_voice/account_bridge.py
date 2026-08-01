@@ -53,7 +53,9 @@ _cloud_url: str | None = None
 
 
 def cloud_url() -> str | None:
-    """The add-on-reported cloud base URL (e.g. https://…supabase.co), if known."""
+    """The add-on-reported cloud base URL, if known. Whose cloud it is, is the
+    add-on's business — this is a pass-through, so naming a vendor here would
+    only ever go stale."""
     return _cloud_url
 
 

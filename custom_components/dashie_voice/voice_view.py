@@ -100,7 +100,7 @@ def _stt_token_url() -> str:
 GATEWAY_OWNED_KEYS = frozenset({"endpoint_id", "options", "client_fulfilled_tools"})
 #: `options` keys read here, never sent on.
 GATEWAY_INTERNAL_OPTION_KEYS = frozenset({"route"})
-#: Retention pinned for EVERY caller — 'server' would move family speech into Supabase.
+#: Retention pinned for EVERY caller — 'server' would move family speech off this box.
 GATEWAY_RETAIN_MODE = "caller"
 
 
