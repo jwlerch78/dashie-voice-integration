@@ -47,16 +47,11 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .brain_target import brain_target, cloud_base, default_brain_route
-from .account_bridge import (
-    AddonUnavailable,
-    SharingDisabled,
-    authorize_device,
-    converse_local,
-    get_account_credential,
-    get_sharing_status,
-    get_voice_config,
-    mint_live_token,
-)
+from .addon_bridge import AddonUnavailable, SharingDisabled
+from .addon_voice import converse_local, get_voice_config, mint_live_token
+# ⚠️ THE ACCOUNT LANE — this one import is the whole of it in this file, and a
+# build with no account drops this line together with the views below that use it.
+from .account_bridge import authorize_device, get_account_credential, get_sharing_status
 
 _LOGGER = logging.getLogger(__name__)
 

@@ -18,7 +18,7 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.start import async_at_started
 
-from .account_bridge import get_voice_config
+from .addon_voice import get_voice_config
 from .addon_bridge import set_bridge_config
 from .const import (
     CONF_BRIDGE_HOST,

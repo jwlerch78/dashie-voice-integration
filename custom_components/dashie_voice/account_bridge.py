@@ -3,16 +3,20 @@
 
 Ported from the Dashie integration's addon_bridge account helpers. The add-on
 holds the household account JWT and the sharing opt-in; this module is the only
-place the integration asks for them, and voice_view.py is the only consumer.
+place the integration asks for them.
+
+⚠️ THIS WHOLE MODULE IS THE ACCOUNT LANE, and a build with no account does not
+ship it. The add-on calls that need no account (its own brain, the voice config,
+a BYOK Live token) moved to `addon_voice.py` so that the brand boundary is a
+file boundary — see that module's header for why a carve would have been worse.
+Anything added here must genuinely need the account JWT or the sharing gate.
 
 Semantics preserved from the Dashie lane (they are field-tested):
   - credential cache capped at 5 min so an account swap on the box can't vend
     the old JWT for days;
   - sharing re-checked (30s TTL) even on a credential cache hit, so a revoked
     toggle takes effect without waiting for JWT expiry;
-  - everything fails CLOSED on sharing; voice-config fails to NO ANSWER ({}),
-    leaving the route default to the build's brain seam rather than guessing
-    a lane this build may not have.
+  - everything fails CLOSED on sharing.
 """
 
 from __future__ import annotations
@@ -23,50 +27,34 @@ from datetime import datetime
 
 from homeassistant.core import HomeAssistant
 
-from .addon_bridge import AddonUnavailable, call_addon_json
+from .addon_bridge import AddonUnavailable, SharingDisabled, call_addon_json
+from .brain_target import set_reported_cloud_base
 
 _LOGGER = logging.getLogger(__name__)
 
 _SHARING_STATUS_PATH = "/api/internal/sharing-status"
 _CREDENTIAL_PATH = "/api/internal/account-credential"
-_VOICE_CONFIG_PATH = "/api/internal/voice-config"
 _AUTHORIZE_DEVICE_PATH = "/api/internal/authorize-device"
-_CONVERSE_LOCAL_PATH = "/api/voice/converse-local"
-_LIVE_TOKEN_PATH = "/api/keys/live-token"
 
 _REFRESH_SKEW = 120.0
 _CREDENTIAL_TTL = 300.0
 _SHARING_TTL = 30.0
-# Brain turns on modest hardware can take minutes (see addon_bridge._TIMEOUT).
-_BRAIN_TIMEOUT_S = 300
 
 _cache: dict = {"jwt": None, "exp": 0.0, "user_id": None}
 _sharing_cache: dict = {"off": False, "exp": 0.0}
-
-
-class SharingDisabled(AddonUnavailable):
-    """Add-on reachable + signed in, but household cloud sharing is off."""
-
-
-#: Cloud edge-function base URL as reported by the add-on (which knows the
-#: configured cloud_env). None until the add-on has answered once; consumers
-#: fall back to their own default (older add-ons don't report it).
-_cloud_url: str | None = None
-
-
-def cloud_url() -> str | None:
-    """The add-on-reported cloud base URL, if known. Whose cloud it is, is the
-    add-on's business — this is a pass-through, so naming a vendor here would
-    only ever go stale."""
-    return _cloud_url
 
 
 async def get_sharing_status(hass: HomeAssistant) -> dict:
     """The add-on's `{available, signed_in, household_sharing, reason, account_email?, cloud_url?}`.
 
     Never raises — unreachable → `{available: False, reason: "addon_unreachable"}`.
+
+    Also the only place the add-on's reported cloud base arrives, so it hands
+    that straight to `brain_target`, which owns where the brain is. The
+    dependency runs THIS way deliberately: the account lane knows about the
+    brain seam, the brain seam knows nothing about the account lane, so a build
+    without this module still resolves a brain.
     """
-    global _cloud_url
     try:
         status, body = await call_addon_json(hass, _SHARING_STATUS_PATH)
     except AddonUnavailable:
@@ -74,7 +62,7 @@ async def get_sharing_status(hass: HomeAssistant) -> dict:
     if status != 200:
         return {"available": False, "reason": "bad_response"}
     if isinstance(body, dict) and isinstance(body.get("cloud_url"), str) and body["cloud_url"].startswith("https://"):
-        _cloud_url = body["cloud_url"].rstrip("/")
+        set_reported_cloud_base(body["cloud_url"].rstrip("/"))
     return body or {"available": False, "reason": "bad_response"}
 
 
@@ -131,30 +119,6 @@ def clear_credential_cache() -> None:
     _sharing_cache["exp"] = 0.0
 
 
-async def get_voice_config(hass: HomeAssistant) -> dict:
-    """The account's voice route + kiosk mirror block. Never raises.
-
-    Returns `{}` when the config could not be read — NOT a guessed route. This
-    function used to fail open to `{"route": "cloud"}`, which named a lane a
-    no-cloud build does not have; callers now apply their own default, and the
-    one that needs a route asks `brain_target.default_brain_route()`, which
-    derives it from the build's brain seam.
-
-    Returning `{}` is safe for every caller: the status probe already gates on
-    `route in ("local","cloud")` and simply reports no route it could not read,
-    and the wake-word/personality readers are all `.get(...)` with fallbacks.
-    """
-    try:
-        status, body = await call_addon_json(hass, _VOICE_CONFIG_PATH)
-    except AddonUnavailable as err:
-        _LOGGER.warning("DROP: voice-config unreadable (add-on unavailable: %s) — caller defaults apply", err)
-        return {}
-    if status != 200:
-        _LOGGER.warning("DROP: voice-config unreadable (HTTP %s) — caller defaults apply", status)
-        return {}
-    return body or {}
-
-
 async def authorize_device(hass: HomeAssistant, user_code: str) -> tuple[dict, int]:
     """Authorize a LAN kiosk's device code into the household account (Kiosk Real Login).
 
@@ -167,47 +131,6 @@ async def authorize_device(hass: HomeAssistant, user_code: str) -> tuple[dict, i
         return body, status
     except AddonUnavailable as err:
         return {"error": "addon_unavailable", "message": f"Dashie for Home Assistant add-on unreachable: {err}"}, 503
-
-
-async def converse_local(hass: HomeAssistant, payload: dict) -> tuple[dict, int]:
-    """Run a transcript through the add-on's own brain (/api/voice/converse-local).
-
-    On the Dashie for Home Assistant add-on this routes per ITS config: Configuration-tab engines
-    first, signed-in cloud fallback. Raises SharingDisabled on 403, AddonUnavailable
-    when unreachable.
-    """
-    status, body = await call_addon_json(
-        hass, _CONVERSE_LOCAL_PATH, method="post", payload=payload, timeout_s=_BRAIN_TIMEOUT_S
-    )
-    if status == 403:
-        raise SharingDisabled("household sharing disabled")
-    return body, status
-
-
-async def mint_live_token(hass: HomeAssistant, model: str | None = None) -> tuple[dict, int]:
-    """Mint a Live-only Gemini ephemeral token from the box's stored gemini key.
-
-    Returns (body, status) — the same order as authorize_device and converse_local,
-    which is the shape voice_view unpacks from every helper in this module. The
-    transport underneath (call_addon_json) returns (status, body); these public
-    helpers swap it, so callers see one order and only this file deals in two.
-
-    ⚠️ It DECLARED that and did not do it: it returned the transport's tuple
-    unchanged, so the caller's `status` bound to the body dict and `status < 400`
-    compared a dict to an int — TypeError, 500 on every mint. The swap below is
-    what the annotation always claimed.
-
-    Only fired through the CEDED path, which is why a device test passed: un-ceded,
-    this view is not the one serving the request.
-
-    Raises AddonUnavailable when unreachable. Only the token crosses — the raw key
-    never leaves the box.
-    """
-    payload: dict = {}
-    if model:
-        payload["model"] = model
-    status, body = await call_addon_json(hass, _LIVE_TOKEN_PATH, method="post", payload=payload, timeout_s=15)
-    return body, status
 
 
 def _parse_expiry(iso: str | None, now: float) -> float:

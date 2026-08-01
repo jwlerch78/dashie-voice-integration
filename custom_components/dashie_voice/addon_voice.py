@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Voice lane to the add-on — the calls that need no account.
+
+Split out of `account_bridge.py`, which had grown two lanes with one name. It
+described itself as "the LAN-sharing lane" while holding three functions that
+have nothing to do with sharing: the add-on's own brain, its voice config, and a
+BYOK Live token minted from a key the box already stores. None of them touch the
+household account, the sharing opt-in, or the account JWT.
+
+WHY THE SPLIT IS A FILE AND NOT A COMMENT
+-----------------------------------------
+A build with no account ships this module and NOT `account_bridge.py`. Making
+the brand boundary a file boundary means the branded variant drops one path
+instead of carving eight functions out of a shared file — and a carve is the
+fragile kind of change: it is invisible to a residue scan, it re-breaks whenever
+the source file is edited, and the generator's block-dropper has eaten
+neighbouring code doing exactly this before.
+
+So the rule for anything added here: if it needs `get_account_credential`, the
+sharing gate, or the account JWT, it belongs in `account_bridge.py`, not here.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from homeassistant.core import HomeAssistant
+
+from .addon_bridge import AddonUnavailable, SharingDisabled, call_addon_json
+
+_LOGGER = logging.getLogger(__name__)
+
+_VOICE_CONFIG_PATH = "/api/internal/voice-config"
+_CONVERSE_LOCAL_PATH = "/api/voice/converse-local"
+_LIVE_TOKEN_PATH = "/api/keys/live-token"
+
+# Brain turns on modest hardware can take minutes (see addon_bridge._TIMEOUT).
+_BRAIN_TIMEOUT_S = 300
+
+
+async def get_voice_config(hass: HomeAssistant) -> dict:
+    """The voice route + kiosk mirror block, as the add-on reports it. Never raises.
+
+    Returns `{}` when the config could not be read — NOT a guessed route. This
+    used to fail open to `{"route": "cloud"}`, which named a lane a no-cloud
+    build does not have; callers now apply their own default, and the one that
+    needs a route asks `brain_target.default_brain_route()`, which derives it
+    from the build's brain seam.
+
+    Returning `{}` is safe for every caller: the status probe already gates on
+    `route in ("local","cloud")` and simply reports no route it could not read,
+    and the wake-word/personality readers are all `.get(...)` with fallbacks.
+    """
+    try:
+        status, body = await call_addon_json(hass, _VOICE_CONFIG_PATH)
+    except AddonUnavailable as err:
+        _LOGGER.warning("DROP: voice-config unreadable (add-on unavailable: %s) — caller defaults apply", err)
+        return {}
+    if status != 200:
+        _LOGGER.warning("DROP: voice-config unreadable (HTTP %s) — caller defaults apply", status)
+        return {}
+    return body or {}
+
+
+async def converse_local(hass: HomeAssistant, payload: dict) -> tuple[dict, int]:
+    """Run a transcript through the add-on's own brain (/api/voice/converse-local).
+
+    On the Dashie for Home Assistant add-on this routes per ITS config: Configuration-tab engines
+    first, signed-in cloud fallback. Raises SharingDisabled on 403, AddonUnavailable
+    when unreachable.
+
+    The 403 is the one account-shaped thing here, and it is the ADD-ON's gate,
+    not this integration's — a build with no account simply never receives one.
+    """
+    status, body = await call_addon_json(
+        hass, _CONVERSE_LOCAL_PATH, method="post", payload=payload, timeout_s=_BRAIN_TIMEOUT_S
+    )
+    if status == 403:
+        raise SharingDisabled("household sharing disabled")
+    return body, status
+
+
+async def mint_live_token(hass: HomeAssistant, model: str | None = None) -> tuple[dict, int]:
+    """Mint a Live-only Gemini ephemeral token from the box's stored gemini key.
+
+    Returns (body, status) — the same order as the other public helpers, so
+    callers see one order and only the transport underneath deals in two.
+
+    BYOK, not account: the key is one the box already holds. Only the token
+    crosses — the raw key never leaves the box.
+
+    Raises AddonUnavailable when unreachable.
+    """
+    payload: dict = {}
+    if model:
+        payload["model"] = model
+    status, body = await call_addon_json(hass, _LIVE_TOKEN_PATH, method="post", payload=payload, timeout_s=15)
+    return body, status

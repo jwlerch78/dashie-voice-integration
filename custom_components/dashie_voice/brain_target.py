@@ -8,10 +8,10 @@ a second brand exists, because "where is the brain" is the thing that differs
 between them — and a value that differs per brand, duplicated across call sites,
 is the shape that breaks silently across a rename.
 
-So this module owns the answer and nothing else. Deliberately NOT in
-`addon_bridge`: `account_bridge` already imports `addon_bridge`, and this needs
-both, so putting it there would be a cycle. It sits above both bridges, which is
-also where it belongs conceptually.
+So this module owns the answer and nothing else. It imports only the transport
+(`addon_bridge`) and is imported BY the account lane, never the other way round
+— a build with no account lane does not ship `account_bridge.py`, and this
+module still has to resolve a brain in that build.
 
 WHAT THIS DOES NOT DO
 ---------------------
@@ -34,13 +34,11 @@ from __future__ import annotations
 
 from homeassistant.core import HomeAssistant
 
-from . import account_bridge
-from .account_bridge import get_account_credential
-from .addon_bridge import addon_brain_target
+from .addon_bridge import AddonUnavailable, addon_brain_target
 
 #: Fallback cloud base, used when the add-on is too old to report one. The
-#: add-on is the real source (`account_bridge.cloud_url()`, populated on the
-#: first sharing-status check); this is the floor under it.
+#: add-on is the real source (pushed in by the account lane on the first
+#: sharing-status check); this is the floor under it.
 #:
 #: ⚠️ THIS CONSTANT IS THE BRAND SEAM. A build with no account cloud sets it to
 #: None — that single change is what makes the add-on the brain for that build.
@@ -48,10 +46,22 @@ from .addon_bridge import addon_brain_target
 #: still carry this URL, and the generator's deny scan fails on exactly that.
 _FALLBACK_CLOUD_BASE: str | None = "https://cwglbtosingboqepsmjk.supabase.co"
 
+#: What the add-on reported, once it has. Set by the account lane, never read
+#: from it — this module must not import `account_bridge`, because a build with
+#: no account does not ship that module and this one still has to resolve a
+#: brain. Pushing in beats pulling out for exactly that reason.
+_reported_cloud_base: str | None = None
+
+
+def set_reported_cloud_base(url: str) -> None:
+    """Record the cloud base the add-on reported (account lane calls this)."""
+    global _reported_cloud_base
+    _reported_cloud_base = url
+
 
 def cloud_base() -> str | None:
     """The account cloud base, or None when this build has no cloud at all."""
-    return account_bridge.cloud_url() or _FALLBACK_CLOUD_BASE
+    return _reported_cloud_base or _FALLBACK_CLOUD_BASE
 
 
 def default_brain_route() -> str:
@@ -79,11 +89,19 @@ async def brain_target(
     Returns (url, headers). Raises AddonUnavailable when there is no cloud and
     the add-on cannot be reached — which for a no-cloud build is the only brain
     there is, so failing loudly is correct.
+
+    `cred` is REQUIRED on a cloud build. This used to fetch one itself when the
+    caller passed None, which was the module's only reason to import the account
+    lane; no caller has ever relied on it (both pass a credential they already
+    hold). Dropping it is what lets a no-account build ship this module unchanged.
     """
     base = cloud_base()
     if base:
         if cred is None:
-            cred = await get_account_credential(hass)
+            raise AddonUnavailable(
+                "DROP: brain_target called without a credential on a cloud build — "
+                "the caller must fetch one from the account lane"
+            )
         return f"{base}/functions/v1/voice-conversation", {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {cred}",
