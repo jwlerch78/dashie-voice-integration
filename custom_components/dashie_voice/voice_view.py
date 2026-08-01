@@ -199,6 +199,25 @@ class DashieVoiceConverseView(HomeAssistantView):
                 return web.json_response({"ok": False, "error": f"addon_unavailable: {err}"}, status=503, headers=route_header)
             return web.json_response(turn, status=(200 if status < 400 else status), headers=route_header)
 
+        return await self._converse_via_cloud(request, hass, payload, body, route_header)
+
+    async def _converse_via_cloud(
+        self,
+        request: web.Request,
+        hass: HomeAssistant,
+        payload: dict,
+        body: dict,
+        route_header: dict[str, str],
+    ) -> web.Response:
+        """The cloud lane: account credential, cloud brain, optional NDJSON stream.
+
+        ⚠️ THE ACCOUNT LANE. Extracted as its own method so a build with no
+        account drops ONE named block, rather than having the tail of post()
+        carved out by an anchor that has to guess where the method ends — the
+        generator's block-dropper has eaten neighbouring code doing precisely
+        that. In such a build post() never reaches the call above, because an
+        explicit route "cloud" is coerced to local before it can.
+        """
         try:
             cred = await get_account_credential(hass)
         except SharingDisabled:
