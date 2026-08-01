@@ -148,6 +148,24 @@ async def _resolve_base(hass: HomeAssistant) -> str:
     raise AddonUnavailable(f"no reachable Dashie for Home Assistant add-on (tried {len(candidates)} bases)")
 
 
+async def addon_brain_target(hass: HomeAssistant) -> tuple[str, dict[str, str]]:
+    """Where the ADD-ON brain is, and how to authenticate to it.
+
+    Split out of call_addon_brain so a caller that must own its own request —
+    the LAN gateway, which streams — can reach the same endpoint with the same
+    credential rather than re-deriving either. Raises AddonUnavailable for the
+    same reasons, at the same point.
+    """
+    secret = await _read_bridge_secret(hass)
+    if not secret:
+        raise AddonUnavailable("bridge secret not found — is the add-on installed?")
+    base = await _resolve_base(hass)
+    return f"{base}{ADDON_CONVERSE_PATH}", {
+        "Content-Type": "application/json",
+        BRIDGE_HEADER: secret,
+    }
+
+
 async def call_addon_brain(hass: HomeAssistant, payload: dict) -> tuple[dict, int]:
     """POST a VoiceRequest to the add-on brain. THE one brain POST site (seam rule).
 

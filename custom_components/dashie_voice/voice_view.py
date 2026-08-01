@@ -37,7 +37,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from . import account_bridge
+from .brain_target import brain_target, cloud_base
 from .account_bridge import (
     AddonUnavailable,
     SharingDisabled,
@@ -79,22 +79,12 @@ def _actor(request: web.Request) -> str:
         return "unknown"
     return f"{user.name or user.id} ({'admin' if user.is_admin else 'non-admin'})"
 
-# Cloud base URL comes from the add-on (which knows the configured cloud_env)
-# via account_bridge.cloud_url(), populated on the first sharing-status check.
-# The constant below is only the fallback for add-ons too old to report it.
-_FALLBACK_CLOUD_BASE = "https://cwglbtosingboqepsmjk.supabase.co"
-
-
-def _cloud_base() -> str:
-    return account_bridge.cloud_url() or _FALLBACK_CLOUD_BASE
-
-
-def _brain_url() -> str:
-    return f"{_cloud_base()}/functions/v1/voice-conversation"
+# WHERE the brain is lives in brain_target.py — the one module that knows, and
+# the seam a second brand differs at. Don't re-derive an endpoint here.
 
 
 def _stt_token_url() -> str:
-    return f"{_cloud_base()}/functions/v1/issue-stt-token"
+    return f"{cloud_base()}/functions/v1/issue-stt-token"
 
 #: VoiceRequest keys the GATEWAY computes; everything else passes through.
 GATEWAY_OWNED_KEYS = frozenset({"endpoint_id", "options", "client_fulfilled_tools"})
@@ -132,17 +122,11 @@ def build_brain_payload(body: dict) -> tuple[dict, str, str | None]:
     return payload, endpoint_id, route
 
 
-async def call_cloud_brain(hass: HomeAssistant, payload: dict, cred: str | None = None) -> tuple[dict, int]:
-    """POST a prepared VoiceRequest to the cloud brain with the account credential."""
-    if cred is None:
-        cred = await get_account_credential(hass)
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {cred}",
-        "apikey": cred,
-    }
+async def call_brain(hass: HomeAssistant, payload: dict, cred: str | None = None) -> tuple[dict, int]:
+    """POST a prepared VoiceRequest to the brain, wherever this build's brain is."""
+    url, headers = await brain_target(hass, cred=cred)
     session = async_get_clientsession(hass)
-    async with session.post(_brain_url(), json=payload, headers=headers) as resp:
+    async with session.post(url, json=payload, headers=headers) as resp:
         turn = await resp.json(content_type=None)
         return turn, (200 if resp.status < 400 else resp.status)
 
@@ -197,17 +181,13 @@ class DashieVoiceConverseView(HomeAssistantView):
         except AddonUnavailable as err:
             return web.json_response({"ok": False, "error": f"addon_unavailable: {err}"}, status=503, headers=route_header)
 
-        brain_headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {cred}",
-            "apikey": cred,
-        }
+        brain_url, brain_headers = await brain_target(hass, cred=cred)
         session = async_get_clientsession(hass)
 
         # COMPAT: NDJSON progress stream only when the client asked (`body.stream`).
         if not body.get("stream"):
             try:
-                turn, status = await call_cloud_brain(hass, payload, cred=cred)
+                turn, status = await call_brain(hass, payload, cred=cred)
             except Exception as err:  # noqa: BLE001
                 _LOGGER.warning("voice converse → brain failed: %s", err)
                 return web.json_response({"ok": False, "error": f"brain_call_failed: {err}"}, status=502, headers=route_header)
@@ -219,7 +199,7 @@ class DashieVoiceConverseView(HomeAssistantView):
         )
         prepared = False
         try:
-            async with session.post(_brain_url(), json=payload, headers=brain_headers) as resp:
+            async with session.post(brain_url, json=payload, headers=brain_headers) as resp:
                 if resp.status >= 400:
                     err_body = await resp.text()
                     return web.Response(status=resp.status, text=err_body, content_type="application/json", headers=route_header)
