@@ -15,9 +15,11 @@ real box with the control beside it on the same connection: the tablet's user
 subscribed and received ``state_changed``, while the same connection asking for
 the custom event was refused ``unauthorized``.
 
-(The word "subscription" is avoided on purpose throughout: this file is generated
-into a free edition whose deny scan forbids it, and rightly — a reader there
-should never meet a word implying a paid tier that does not exist.)
+(Wording note: this file generates into a free edition whose deny scan forbids
+billing vocabulary, and rightly — a reader there should never meet a word
+implying a paid tier that does not exist. The scan cannot tell a WebSocket
+listener from a billing arrangement, and neither can a skimming human, so the
+prose here says "subscribe to" and never the noun.)
 
 🔴 THE STATE IS MEANINGLESS ON PURPOSE, AND THIS IS BINDING
 -----------------------------------------------------------
