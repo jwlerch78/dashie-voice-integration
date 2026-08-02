@@ -31,11 +31,37 @@ from .addon_bridge import AddonUnavailable, SharingDisabled, call_addon_json, pi
 _LOGGER = logging.getLogger(__name__)
 
 _VOICE_CONFIG_PATH = "/api/internal/voice-config"
+_LEASE_PATH = "/api/internal/voice-lease"
 _CONVERSE_LOCAL_PATH = "/api/voice/converse-local"
 _LIVE_TOKEN_PATH = "/api/keys/live-token"
 
 # Brain turns on modest hardware can take minutes (see addon_bridge._TIMEOUT).
 _BRAIN_TIMEOUT_S = 300
+
+
+async def request_lease(hass: HomeAssistant, payload: dict) -> tuple[dict, int]:
+    """Ask the add-on for a capability lease — issue and renew are one call.
+
+    CONTRACTS #65. This integration is a PROXY and makes no grant decision of
+    its own: a decision here would be a second source of truth, which is the
+    class of bug the lease exists to remove. It passes the add-on's status
+    through untouched, because the STATUS is the protocol —
+
+      200  granted
+      403  a definite refusal → the device self-destructs at once
+      503  the add-on is unreachable, so grant state is UNKNOWN, not withdrawn
+           → the device keeps its lease and retries until expiry
+
+    Raises nothing: an unreachable add-on becomes the 503 above rather than an
+    exception, so the caller cannot accidentally turn "I couldn't ask" into "the
+    answer was no".
+    """
+    try:
+        status, body = await call_addon_json(hass, _LEASE_PATH, method="post", payload=payload, timeout_s=15)
+    except AddonUnavailable as err:
+        _LOGGER.warning("DROP: lease unreachable (%s) — reporting UNKNOWN, not denied", err)
+        return {"granted": False, "reason": "addon_unavailable"}, 503
+    return body, status
 
 
 async def get_addon_availability(hass: HomeAssistant) -> dict:

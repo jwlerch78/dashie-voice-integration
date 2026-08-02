@@ -53,6 +53,7 @@ from .addon_voice import (
     get_addon_availability,
     get_voice_config,
     mint_live_token,
+    request_lease,
 )
 # ⚠️ THE ACCOUNT LANE — this one import is the whole of it in this file, and a
 # build with no account drops this line together with the views below that use it.
@@ -461,6 +462,41 @@ class DashieVoiceLiveTokenView(HomeAssistantView):
         return web.json_response(result, status=(200 if status < 400 else status))
 
 
+class DashieVoiceLeaseView(HomeAssistantView):
+    """Capability lease — issue and renew (CONTRACTS #65).
+
+    A satellite cannot reach the add-on directly (that needs the bridge secret,
+    which a satellite must never hold), so the lease rides the authenticated LAN
+    path that already exists: this gateway. We proxy and decide nothing.
+
+    🔴 The add-on's STATUS is passed through untouched, because the status IS the
+    protocol: 200 granted · 403 a definite refusal, self-destruct now · 503 the
+    grant state is UNKNOWN, keep the lease and retry until expiry. Collapsing 403
+    and 503 into one error would either revoke the household on every add-on
+    restart, or never revoke at all.
+    """
+
+    url = "/api/dashie_voice/voice/lease"
+    extra_urls = ["/api/dashie/voice/lease"]  # cross-integration path (see module docstring)
+    name = "api:dashie_voice:voice:lease"
+    requires_auth = True
+
+    async def post(self, request: web.Request) -> web.Response:
+        hass: HomeAssistant = request.app["hass"]
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001
+            body = {}
+
+        payload: dict = {"endpoint_id": (body or {}).get("endpoint_id") or "ha-voice"}
+        caps = (body or {}).get("capabilities")
+        if isinstance(caps, list):
+            payload["capabilities"] = [c for c in caps if isinstance(c, str)]
+
+        result, status = await request_lease(hass, payload)
+        return web.json_response(result, status=status)
+
+
 def register_voice_views(hass: HomeAssistant) -> None:
     """Register the gateway views (call only via async_register_voice_views)."""
     hass.http.register_view(DashieVoiceConverseView())
@@ -468,4 +504,5 @@ def register_voice_views(hass: HomeAssistant) -> None:
     hass.http.register_view(DashieVoiceSessionView())
     hass.http.register_view(DashieVoiceAccountAuthorizeView())
     hass.http.register_view(DashieVoiceLiveTokenView())
+    hass.http.register_view(DashieVoiceLeaseView())
     _LOGGER.info("Registered Dashie Voice gateway views (/api/dashie_voice/voice/* + legacy /api/dashie/voice/* aliases)")
