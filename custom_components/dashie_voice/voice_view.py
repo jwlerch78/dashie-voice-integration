@@ -168,8 +168,16 @@ class DashieVoiceConverseView(HomeAssistantView):
         # An unreadable config yields no route at all rather than a guessed
         # "cloud" — this build's own default then applies (brain_target).
         authoritative_route = (await get_voice_config(hass)).get("route") or default_brain_route()
-        # Both header names carry the same value: X-Dashie-Voice-Brain-Route is
-        # canonical, X-Dashie-Brain-Route stays for shipped Dashie APKs.
+        # Both header names carry the same value. The first is this integration's
+        # canonical, brand-parameterised name; the second is a WIRE VALUE that is
+        # the same in every brand because the app reads that exact literal and
+        # does not key it by edition.
+        #
+        # ⚠️ Do not "clean up" the second as legacy. A branded build once dropped
+        # it and the brain-route keystone went inert: the response then carries no
+        # header the device recognises, so a device holding a cached route strands
+        # permanently, with both ends healthy. Same class as the extra_urls drop
+        # (CONTRACTS #63) — a compat name is a contract, not clutter.
         route_header = {
             "X-Dashie-Voice-Brain-Route": authoritative_route,
             "X-Dashie-Brain-Route": authoritative_route,
