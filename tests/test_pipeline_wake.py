@@ -11,10 +11,11 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 from homeassistant.components.assist_pipeline.pipeline import PipelineStorageCollection
 from homeassistant.helpers.storage import Store
 
-from custom_components.dashie_voice import pipeline as dv_pipeline
+from custom_components.dashie_voice import pipeline as dv_pipeline, satellite_wake
 
 ENGINES = {
     "conversation_engine": "conversation.dashie_voice",
@@ -96,3 +97,25 @@ async def test_an_already_wired_pipeline_is_left_alone(hass, make_store):
     assert done is True
     update.assert_not_called()
     assert store.data[wired.id].wake_word_entity == "wake_word.users_choice"
+
+
+async def test_wake_is_wired_when_the_wake_entity_already_exists_at_setup(hass, make_store):
+    """The self-heal must also cover the case where nothing is left to wait for.
+
+    A pipeline is only given a wake word when it is CREATED, so an existing pipeline with
+    wake unset relies on the watcher. The watcher used to give up whenever a wake_word
+    entity was already present ("already wired at creation"), which is exactly the state of
+    a box whose wake service starts before the integration: nothing ever wired it.
+    """
+    store, before = await make_store(SETTINGS)
+    hass.states.async_set("wake_word.openwakeword", "2026-09-17T00:00:00+00:00")
+    wake_id = next(iter(satellite_wake.WAKE_MODELS))
+    entry = MockConfigEntry(domain="dashie_voice", data={})
+    entry.add_to_hass(hass)
+
+    await dv_pipeline.async_wire_wake_when_ready(hass, entry, wake_id)
+    await hass.async_block_till_done()
+
+    after = store.data[before.id]
+    assert after.wake_word_entity == "wake_word.openwakeword"
+    assert after.wake_word_id == wake_id
