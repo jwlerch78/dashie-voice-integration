@@ -20,7 +20,17 @@ import json
 import socket
 from unittest.mock import patch
 
-from aiohttp import ClientSession, web
+from aiohttp import ClientSession, TCPConnector, ThreadedResolver, web
+
+try:  # Under pytest-homeassistant, pytest_socket blocks sockets; this file's whole point is REAL TCP (two sockets).
+    import pytest
+    pytestmark = pytest.mark.enable_socket
+    # On the RUNNER's loop, not a per-test asyncio.run(): each asyncio.run leaves its executor-shutdown thread
+    # alive for a moment, and pytest-homeassistant fails the test at teardown for the lingering thread.
+    _async_test = pytest.mark.asyncio
+except ImportError:  # run directly without pytest
+    def _async_test(fn):
+        return fn
 from aiohttp.test_utils import TestServer
 
 from custom_components.dashie_voice import addon_bridge, stt_relay_view
@@ -29,6 +39,13 @@ from custom_components.dashie_voice.stt_relay_view import DashieVoiceSttRelayVie
 
 WAV = b"RIFF\x24\x00\x00\x00WAVEfmt control-audio"
 URL = "/api/dashie_voice/voice/stt-relay"
+
+
+def _session() -> ClientSession:
+    """A test client session on aiohttp's THREADED resolver. The default async resolver (pycares) starts a
+    process-global shutdown thread when a session closes, and pytest-homeassistant fails the test at teardown
+    for that lingering thread. Test harness only: production uses HA's own session."""
+    return ClientSession(connector=TCPConnector(resolver=ThreadedResolver()))
 
 
 def fake_addon(mode: str, seen: list):
@@ -79,7 +96,7 @@ async def run(mode: str, body: bytes = WAV, *, addon: str = "up"):
     await server.start_server()
     front = TestServer(view_app())
     await front.start_server()
-    session = ClientSession()
+    session = _session()
     base = str(server.make_url("")).rstrip("/") if addon == "up" else f"http://127.0.0.1:{_closed_port()}"
 
     async def secret(_h):
@@ -98,7 +115,7 @@ async def run(mode: str, body: bytes = WAV, *, addon: str = "up"):
              patch.object(addon_bridge, "async_get_clientsession", lambda _h: session), \
              patch.object(stt_relay_view, "RELAY_TIMEOUT_S", 1), \
              patch("custom_components.dashie_voice.voice_view._actor", lambda _r: "test"):
-            async with ClientSession() as client:
+            async with _session() as client:
                 async with client.post(front.make_url(URL), data=body, headers={"Content-Type": "audio/wav"}) as r:
                     return r.status, dict(r.headers), await r.read(), seen
     finally:
@@ -111,54 +128,62 @@ def _json(b: bytes):
     return json.loads(b.decode())
 
 
-def test_200_passes_through_and_asks_gemini_with_the_wav():
-    status, headers, data, seen = asyncio.run(run("200"))
+@_async_test
+async def test_200_passes_through_and_asks_gemini_with_the_wav():
+    status, headers, data, seen = await (run("200"))
     assert status == 200 and _json(data) == {"text": "turn on the lights"}
     assert headers.get("X-Dashie-Stt-Relay") == "1"
     assert seen[0]["body"] == WAV and seen[0]["query"] == {"engine": "gemini"}
     assert seen[0]["secret"] == "bridge-secret-control"
 
 
-def test_402_insufficient_credits_passes_through_verbatim():
-    status, headers, data, _ = asyncio.run(run("402"))
+@_async_test
+async def test_402_insufficient_credits_passes_through_verbatim():
+    status, headers, data, _ = await (run("402"))
     assert status == 402 and _json(data) == {"error": "insufficient_credits", "message": "Out of Dashie credits."}
     assert headers.get("X-Dashie-Stt-Relay") == "1"
 
 
-def test_503_no_key_from_the_addon_is_NOT_addon_unavailable():
-    status, headers, data, _ = asyncio.run(run("503_no_key"))
+@_async_test
+async def test_503_no_key_from_the_addon_is_NOT_addon_unavailable():
+    status, headers, data, _ = await (run("503_no_key"))
     assert status == 503 and _json(data) == {"error": "gemini_stt_no_key"}
     assert "reason" not in _json(data)
     assert headers.get("X-Dashie-Stt-Relay") == "1"
 
 
-def test_NEVER_SENT_refused_connection_is_503_addon_unavailable():
-    status, headers, data, seen = asyncio.run(run("200", addon="refused"))
+@_async_test
+async def test_NEVER_SENT_refused_connection_is_503_addon_unavailable():
+    status, headers, data, seen = await (run("200", addon="refused"))
     assert status == 503 and _json(data) == {"reason": "addon_unavailable"}
     assert seen == []                        # positive proof nothing reached an add-on
     assert headers.get("X-Dashie-Stt-Relay") == "1"
 
 
-def test_NEVER_SENT_no_addon_found_is_503_addon_unavailable():
-    status, _h, data, seen = asyncio.run(run("200", addon="not_installed"))
+@_async_test
+async def test_NEVER_SENT_no_addon_found_is_503_addon_unavailable():
+    status, _h, data, seen = await (run("200", addon="not_installed"))
     assert status == 503 and _json(data) == {"reason": "addon_unavailable"} and seen == []
 
 
-def test_SENT_THEN_DROPPED_is_504_outcome_unknown():
-    status, headers, data, seen = asyncio.run(run("drop_after_read"))
+@_async_test
+async def test_SENT_THEN_DROPPED_is_504_outcome_unknown():
+    status, headers, data, seen = await (run("drop_after_read"))
     assert len(seen) == 1                    # the add-on DID receive it: this is the may-have-billed arm
     assert status == 504 and _json(data) == {"reason": "addon_outcome_unknown"}
     assert headers.get("X-Dashie-Stt-Relay") == "1"
 
 
-def test_SENT_THEN_TIMED_OUT_is_504_outcome_unknown():
-    status, _h, data, seen = asyncio.run(run("slow_after_read"))
+@_async_test
+async def test_SENT_THEN_TIMED_OUT_is_504_outcome_unknown():
+    status, _h, data, seen = await (run("slow_after_read"))
     assert len(seen) == 1
     assert status == 504 and _json(data) == {"reason": "addon_outcome_unknown"}
 
 
-def test_empty_body_is_400_and_never_calls_the_addon():
-    status, headers, data, seen = asyncio.run(run("200", body=b""))
+@_async_test
+async def test_empty_body_is_400_and_never_calls_the_addon():
+    status, headers, data, seen = await (run("200", body=b""))
     assert status == 400 and _json(data)["reason"] == "bad_request" and seen == []
     assert headers.get("X-Dashie-Stt-Relay") == "1"
 
@@ -169,7 +194,7 @@ if __name__ == "__main__":
     failed = 0
     for t in tests:
         try:
-            t()
+            asyncio.run(t())
             print(f"✅ {t.__name__}")
         except Exception as e:  # noqa: BLE001
             failed += 1

@@ -18,7 +18,13 @@ import json
 import time
 from unittest.mock import patch
 
-from aiohttp import ClientSession, web
+from aiohttp import ClientSession, TCPConnector, ThreadedResolver, web
+
+try:  # Under pytest-homeassistant, pytest_socket blocks sockets; this file's whole point is REAL TCP (two sockets).
+    import pytest
+    pytestmark = pytest.mark.enable_socket
+except ImportError:  # run directly without pytest
+    pass
 from aiohttp.test_utils import TestServer
 
 from custom_components.dashie_voice import addon_bridge
@@ -27,6 +33,13 @@ from custom_components.dashie_voice.tts_stream_view import DashieVoiceTtsStreamV
 
 CHUNKS = [b"\x01\x02\x03\x04", b"\x05\x06\x07\x08", b"\x09\x0a"]
 GAP_S = 0.3
+
+
+def _session() -> ClientSession:
+    """A test client session on aiohttp's THREADED resolver. The default async resolver (pycares) starts a
+    process-global shutdown thread when a session closes, and pytest-homeassistant fails the test at teardown
+    for that lingering thread. Test harness only: production uses HA's own session."""
+    return ClientSession(connector=TCPConnector(resolver=ThreadedResolver()))
 
 
 def fake_addon(mode: str, seen: list):
@@ -68,7 +81,7 @@ async def run(mode: str, body: dict, *, addon_up: bool = True):
     await addon.start_server()
     front = TestServer(view_app())
     await front.start_server()
-    session = ClientSession()
+    session = _session()
     base = str(addon.make_url("")).rstrip("/")
 
     async def secret(_h):
@@ -82,7 +95,7 @@ async def run(mode: str, body: dict, *, addon_up: bool = True):
         with patch.object(addon_bridge, "_read_bridge_secret", secret), \
              patch.object(addon_bridge, "_resolve_base", resolve), \
              patch.object(addon_bridge, "async_get_clientsession", lambda _h: session):
-            async with ClientSession() as client:
+            async with _session() as client:
                 t0 = time.monotonic()
                 async with client.post(front.make_url("/api/dashie_voice/voice/tts-stream"), json=body) as r:
                     arrivals = []
