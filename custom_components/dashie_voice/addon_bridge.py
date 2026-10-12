@@ -12,6 +12,8 @@ import json
 import logging
 import os
 import time
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
 
 from aiohttp import ClientTimeout
 from homeassistant.core import HomeAssistant
@@ -239,6 +241,44 @@ async def call_addon_raw(
     except Exception as err:  # noqa: BLE001
         _base_cache = None  # force rediscovery next call
         raise AddonUnavailable(f"add-on call failed: {err}") from err
+
+
+@asynccontextmanager
+async def stream_addon(
+    hass: HomeAssistant,
+    path: str,
+    payload: dict,
+    first_byte_timeout_s: int = 20,
+) -> AsyncIterator:
+    """POST JSON to an add-on endpoint and yield the OPEN aiohttp response, unread.
+
+    The streaming sibling of call_addon_raw: the caller reads `resp.status`,
+    `resp.headers` and iterates `resp.content` as bytes arrive (the tablet's
+    Gemini TTS, path K). The timeout covers connect + headers only; a long reply
+    keeps streaming. Raises AddonUnavailable when the add-on or its bridge secret
+    is missing, or the request cannot be sent.
+    """
+    global _base_cache  # noqa: PLW0603
+    secret = await _read_bridge_secret(hass)
+    if not secret:
+        raise AddonUnavailable("bridge secret not found — is the Dashie for Home Assistant add-on installed?")
+
+    base = await _resolve_base(hass)
+    session = async_get_clientsession(hass)
+    try:
+        resp = await session.post(
+            f"{base}{path}",
+            json=payload,
+            headers={"Content-Type": "application/json", BRIDGE_HEADER: secret},
+            timeout=ClientTimeout(total=None, sock_connect=first_byte_timeout_s, sock_read=first_byte_timeout_s),
+        )
+    except Exception as err:  # noqa: BLE001
+        _base_cache = None  # force rediscovery next call
+        raise AddonUnavailable(f"add-on call failed: {err}") from err
+    try:
+        yield resp
+    finally:
+        resp.release()
 
 
 async def call_addon_json(
