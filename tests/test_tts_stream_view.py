@@ -52,6 +52,8 @@ def fake_addon(mode: str, seen: list):
         resp = web.StreamResponse(headers={
             "Content-Type": "audio/pcm", "X-Audio-Format": "pcm_24000", "X-Streaming": "1",
             "X-Tts-Payer": "key", "X-Secret-Internal": "must-not-cross",
+            # As the add-on does (a615956): the lane that spoke, from the request's voice_provider.
+            "X-Tts-Provider": seen[-1]["body"].get("voice_provider") or "gemini",
         })
         await resp.prepare(request)
         for c in CHUNKS:
@@ -121,6 +123,26 @@ def test_streams_pcm_through_without_buffering():
     assert arrivals[0] < GAP_S * (len(CHUNKS) - 1), arrivals
     assert seen[0]["body"] == {"text": "hi", "stream": True, "voice": "Aoede"}
     assert seen[0]["secret"] == "bridge-secret-control"
+
+
+def test_voice_provider_is_forwarded_and_x_tts_provider_passes_back():
+    status, headers, data, _a, seen = asyncio.run(run("200", {"text": "hi", "voice": "EXAVITQu4vr4xnSDxMaL", "voice_provider": "elevenlabs"}))
+    assert status == 200 and data == b"".join(CHUNKS)
+    assert seen[0]["body"] == {"text": "hi", "stream": True, "voice": "EXAVITQu4vr4xnSDxMaL", "voice_provider": "elevenlabs"}
+    # The tablet refuses an ElevenLabs 200 without this header, so it MUST cross.
+    assert headers.get("X-Tts-Provider") == "elevenlabs"
+
+
+def test_no_voice_provider_means_none_forwarded_and_the_gemini_lane_is_named():
+    status, headers, _d, _a, seen = asyncio.run(run("200", {"text": "hi", "voice": "Aoede"}))
+    assert status == 200 and "voice_provider" not in seen[0]["body"]
+    assert headers.get("X-Tts-Provider") == "gemini"
+
+
+def test_a_blank_or_non_string_voice_provider_is_not_forwarded():
+    for vp in ("", 7, None, ["elevenlabs"]):
+        status, _h, _d, _a, seen = asyncio.run(run("200", {"text": "hi", "voice_provider": vp}))
+        assert status == 200 and "voice_provider" not in seen[0]["body"], vp
 
 
 def test_409_no_key_passes_through_verbatim():
